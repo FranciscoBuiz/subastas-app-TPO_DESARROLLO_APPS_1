@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from 'react-native';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity,Image} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 
@@ -67,8 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#000',
-    marginBottom: 24,
-  },
+    marginBottom: 24 },
   addButtonText: { fontSize: 16, fontWeight: '900', color: '#000' },
   card: {
     flexDirection: 'row',
@@ -78,8 +78,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 8,
     padding: 8,
-    marginBottom: 12,
-  },
+    marginBottom: 12 },
   cardImage: { width: 60, height: 60, borderRadius: 4, marginRight: 12 },
   cardBody: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
@@ -87,7 +86,5 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusText: { fontSize: 10, fontWeight: '800', color: '#fff' },
-});
+    borderRadius: 4 },
+  statusText: { fontSize: 10, fontWeight: '800', color: '#fff' } });

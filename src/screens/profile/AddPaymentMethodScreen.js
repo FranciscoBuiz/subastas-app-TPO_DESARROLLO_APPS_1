@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, Alert, Switch } from 'react-native';
+import {View,Text,StyleSheet,TouchableOpacity,TextInput,Alert,Switch} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { addPaymentMethod } from '../../store/slices/paymentSlice';
@@ -88,15 +89,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     height: 50,
-    fontSize: 16,
-  },
+    fontSize: 16 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, padding: 16, backgroundColor: '#f9f9f9', borderRadius: 8, borderWidth: 1, borderColor: '#eee' },
   switchLabel: { fontSize: 14, fontWeight: '700' },
   primaryButton: {
     backgroundColor: '#000',
     paddingVertical: 16,
     alignItems: 'center',
-    borderRadius: 8,
-  },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 },
-});
+    borderRadius: 8 },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 } });

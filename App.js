@@ -28,8 +28,13 @@ import ConsignmentDetailScreen from './src/screens/seller/ConsignmentDetailScree
 // Pantallas de Perfil / Pagos
 import PaymentMethodsScreen from './src/screens/profile/PaymentMethodsScreen';
 import AddPaymentMethodScreen from './src/screens/profile/AddPaymentMethodScreen';
+import ProfileScreen from './src/screens/profile/ProfileScreen';
+import MyAuctionsScreen from './src/screens/profile/MyAuctionsScreen';
+import StatisticsScreen from './src/screens/profile/StatisticsScreen';
+import PublishedItemsScreen from './src/screens/profile/PublishedItemsScreen';
 
 const Stack = createNativeStackNavigator();
+const ProfileNav = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // Placeholder Screen
@@ -38,6 +43,19 @@ const PlaceholderScreen = ({ name }) => (
     <Text>{name}</Text>
   </View>
 );
+
+function ProfileStack() {
+  return (
+    <ProfileNav.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileNav.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileNav.Screen name="MyAuctions" component={MyAuctionsScreen} />
+      <ProfileNav.Screen name="Statistics" component={StatisticsScreen} />
+      <ProfileNav.Screen name="PublishedItems" component={PublishedItemsScreen} />
+      <ProfileNav.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
+      <ProfileNav.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />
+    </ProfileNav.Navigator>
+  );
+}
 
 // Pantalla de Perfil con el boton de Logout y Métodos de Pago
 const ProfilePlaceholder = ({ navigation }) => {
@@ -79,8 +97,6 @@ function AppStack() {
       <Stack.Screen name="LiveAuctionRoom" component={LiveAuctionRoomScreen} />
       <Stack.Screen name="NewConsignment" component={NewConsignmentScreen} />
       <Stack.Screen name="ConsignmentDetail" component={ConsignmentDetailScreen} />
-      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
-      <Stack.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />
     </Stack.Navigator>
   );
 }
@@ -123,7 +139,7 @@ function TabNavigator() {
       <Tab.Screen name="Inicio" component={CatalogScreen} />
       <Tab.Screen name="Subasta" children={() => <PlaceholderScreen name="Mis Subastas" />} />
       <Tab.Screen name="Vender" component={SellerDashboardScreen} />
-      <Tab.Screen name="Perfil" component={ProfilePlaceholder} />
+      <Tab.Screen name="Perfil" component={ProfileStack} />
     </Tab.Navigator>
   );
 }

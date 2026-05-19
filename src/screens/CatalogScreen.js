@@ -1,13 +1,6 @@
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
+import {StyleSheet,Text,View,ScrollView,Image,TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { selectAuction } from '../store/slices/auctionsSlice';
@@ -87,12 +80,10 @@ export default function CatalogScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
+    backgroundColor: '#fff' },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
+    backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -100,117 +91,95 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
-  },
+    borderBottomColor: '#000' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '900',
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   body: {
-    flex: 1,
-  },
+    flex: 1 },
   contentContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
+    paddingBottom: 24 },
   pageTitle: {
     fontSize: 42,
     fontWeight: '900',
     marginTop: 20,
     marginBottom: 10,
     letterSpacing: -1,
-    color: '#000',
-  },
+    color: '#000' },
   subTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   subTitleLeft: {
     fontSize: 12,
     fontWeight: '800',
     color: '#555',
-    letterSpacing: 1,
-  },
+    letterSpacing: 1 },
   subTitleRight: {
     fontSize: 10,
     fontWeight: '900',
     color: '#000',
-    letterSpacing: 1.5,
-  },
+    letterSpacing: 1.5 },
   divider: {
     height: 2,
     backgroundColor: '#000',
-    marginBottom: 20,
-  },
+    marginBottom: 20 },
   card: {
     borderWidth: 1,
     borderColor: '#444',
     marginBottom: 20,
-    backgroundColor: '#fff',
-  },
+    backgroundColor: '#fff' },
   cardInner: {
-    padding: 12,
-  },
+    padding: 12 },
   cardImage: {
     width: '100%',
     height: 180,
     resizeMode: 'cover',
     borderWidth: 1,
-    borderColor: '#ddd',
-  },
+    borderColor: '#ddd' },
   cardBody: {
-    marginTop: 12,
-  },
+    marginTop: 12 },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   cardTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#000',
-  },
+    color: '#000' },
   currencyBadge: {
     borderWidth: 1,
     borderColor: '#000',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 2,
-  },
+    borderRadius: 2 },
   currencyText: {
     fontSize: 10,
-    fontWeight: '900',
-  },
+    fontWeight: '900' },
   cardCategory: {
     fontSize: 10,
     fontWeight: '800',
     color: '#333',
     marginBottom: 4,
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   cardEndTime: {
     fontSize: 10,
     fontWeight: '800',
     color: '#333',
     marginBottom: 16,
-    letterSpacing: 0.5,
-  },
+    letterSpacing: 0.5 },
   cardButton: {
     backgroundColor: '#F7D05C',
     paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#000',
-  },
+    borderColor: '#000' },
   cardButtonText: {
     fontSize: 14,
     fontWeight: '900',
     color: '#000',
-    letterSpacing: 1,
-  },
-});
+    letterSpacing: 1 } });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, Alert } from 'react-native';
+import {View,Text,StyleSheet,TouchableOpacity,TextInput,Alert} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { loginSuccess } from '../../store/slices/authSlice';
@@ -19,8 +20,7 @@ export default function LoginScreen({ navigation }) {
       name: 'Usuario Logueado',
       email: email,
       category: 'COMUN',
-      paymentMethodsVerified: true,
-    }));
+      paymentMethodsVerified: true }));
   };
 
   return (
@@ -78,8 +78,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     height: 50,
-    fontSize: 16,
-  },
+    fontSize: 16 },
   primaryButton: {
     backgroundColor: '#F7D05C',
     paddingVertical: 16,
@@ -87,7 +86,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     borderColor: '#000',
-    marginTop: 20,
-  },
-  primaryButtonText: { fontSize: 16, fontWeight: '900', color: '#000' },
-});
+    marginTop: 20 },
+  primaryButtonText: { fontSize: 16, fontWeight: '900', color: '#000' } });

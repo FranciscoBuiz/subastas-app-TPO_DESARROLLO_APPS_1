@@ -1,13 +1,6 @@
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
+import {StyleSheet,Text,View,ScrollView,Image,TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 
@@ -72,8 +65,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
+    backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -81,71 +73,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
-  },
+    borderBottomColor: '#000' },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '900',
-  },
+    fontWeight: '900' },
   body: {
-    flex: 1,
-  },
+    flex: 1 },
   coverImage: {
     width: 400, // asumiendo ancho de pantalla
     height: 300,
-    resizeMode: 'cover',
-  },
+    resizeMode: 'cover' },
   contentContainer: {
-    padding: 16,
-  },
+    padding: 16 },
   title: {
     fontSize: 22,
     fontWeight: '900',
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   subtitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#555',
-    marginBottom: 16,
-  },
+    marginBottom: 16 },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
     padding: 12,
-    borderRadius: 8,
-  },
+    borderRadius: 8 },
   priceLabel: {
     fontSize: 16,
     fontWeight: '700',
-    marginRight: 8,
-  },
+    marginRight: 8 },
   priceValue: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#2e7d32',
-  },
+    color: '#2e7d32' },
   divider: {
     height: 1,
     backgroundColor: '#ccc',
-    marginVertical: 16,
-  },
+    marginVertical: 16 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   historyText: {
     fontSize: 14,
     lineHeight: 22,
     color: '#333',
-    marginBottom: 16,
-  },
+    marginBottom: 16 },
   ownerText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#888',
-    fontStyle: 'italic',
-  }
+    fontStyle: 'italic' }
 });

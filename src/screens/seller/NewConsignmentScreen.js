@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, TextInput, Alert, Switch, Image } from 'react-native';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity,TextInput,Alert,Switch,Image} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { addConsignment } from '../../store/slices/sellerSlice';
@@ -28,8 +29,7 @@ export default function NewConsignmentScreen({ navigation }) {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.8,
-    });
+      quality: 0.8 });
 
     if (!result.canceled) {
       setPhotos([...photos, result.assets[0].uri]);
@@ -146,8 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     fontSize: 16,
-    height: 50,
-  },
+    height: 50 },
   textArea: { height: 100, paddingTop: 12, textAlignVertical: 'top' },
   photosSection: { marginBottom: 24 },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
@@ -170,5 +169,4 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   switchText: { flex: 1, fontSize: 12, color: '#555', marginRight: 16, lineHeight: 18 },
   submitButton: { backgroundColor: '#000', paddingVertical: 16, borderRadius: 8, alignItems: 'center' },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 },
-});
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 } });

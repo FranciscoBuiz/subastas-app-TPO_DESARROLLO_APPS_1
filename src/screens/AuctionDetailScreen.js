@@ -1,18 +1,12 @@
 import React from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-} from 'react-native';
+import {StyleSheet,Text,View,ScrollView,Image,TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 
 export default function AuctionDetailScreen({ navigation }) {
   const auction = useSelector((state) => state.auctions.selectedAuction);
+  const user = useSelector((state) => state.auth.user);
 
   if (!auction) {
     return (
@@ -60,7 +54,10 @@ export default function AuctionDetailScreen({ navigation }) {
             </TouchableOpacity>
           ))}
           
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('LiveAuctionRoom')}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('LiveAuctionRoom')}
+          >
             <Text style={styles.primaryButtonText}>INGRESAR A SALA DE SUBASTA</Text>
           </TouchableOpacity>
         </View>
@@ -77,8 +74,7 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
+    backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -86,44 +82,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
-  },
+    borderBottomColor: '#000' },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '900',
-  },
+    fontWeight: '900' },
   body: {
-    flex: 1,
-  },
+    flex: 1 },
   coverImage: {
     width: '100%',
     height: 200,
-    resizeMode: 'cover',
-  },
+    resizeMode: 'cover' },
   contentContainer: {
-    padding: 16,
-  },
+    padding: 16 },
   title: {
     fontSize: 24,
     fontWeight: '900',
-    marginBottom: 8,
-  },
+    marginBottom: 8 },
   subtitle: {
     fontSize: 12,
     fontWeight: '700',
     color: '#555',
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   divider: {
     height: 1,
     backgroundColor: '#ccc',
-    marginVertical: 16,
-  },
+    marginVertical: 16 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: 12,
-  },
+    marginBottom: 12 },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -132,32 +119,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     marginBottom: 12,
-    backgroundColor: '#fafafa',
-  },
+    backgroundColor: '#fafafa' },
   itemImage: {
     width: 60,
     height: 60,
     borderRadius: 4,
-    marginRight: 12,
-  },
+    marginRight: 12 },
   itemInfo: {
-    flex: 1,
-  },
+    flex: 1 },
   itemDescription: {
     fontSize: 14,
     fontWeight: '700',
-    marginBottom: 4,
-  },
+    marginBottom: 4 },
   itemArtist: {
     fontSize: 12,
-    color: '#666',
-  },
+    color: '#666' },
   itemPrice: {
     fontSize: 12,
     fontWeight: '800',
     marginTop: 4,
-    color: '#2e7d32',
-  },
+    color: '#2e7d32' },
   primaryButton: {
     backgroundColor: '#F7D05C',
     paddingVertical: 16,
@@ -165,11 +146,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: '#000',
-  },
+    borderColor: '#000' },
   primaryButtonText: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#000',
-  },
-});
+    color: '#000' } });

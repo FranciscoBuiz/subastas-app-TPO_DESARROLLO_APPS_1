@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, TextInput, ScrollView, Alert, Image } from 'react-native';
+import {View,Text,StyleSheet,TouchableOpacity,TextInput,ScrollView,Alert,Image} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -19,8 +20,7 @@ export default function RegisterStep1Screen({ navigation }) {
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      quality: 0.8,
-    });
+      quality: 0.8 });
 
     if (!result.canceled) {
       if (side === 'front') {
@@ -127,8 +127,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     height: 50,
-    fontSize: 16,
-  },
+    fontSize: 16 },
   photoBox: {
     borderWidth: 2,
     borderStyle: 'dashed',
@@ -148,7 +147,5 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     borderRadius: 8,
-    marginTop: 20,
-  },
-  primaryButtonText: { fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 1 },
-});
+    marginTop: 20 },
+  primaryButtonText: { fontSize: 16, fontWeight: '900', color: '#fff', letterSpacing: 1 } });

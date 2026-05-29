@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 
 export default function AuctionDetailScreen({ navigation }) {
   const auction = useSelector((state) => state.auctions.selectedAuction);
+  const user = useSelector((state) => state.auth.user);
 
   if (!auction) {
     return (
@@ -53,7 +54,10 @@ export default function AuctionDetailScreen({ navigation }) {
             </TouchableOpacity>
           ))}
           
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('LiveAuctionRoom')}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('LiveAuctionRoom')}
+          >
             <Text style={styles.primaryButtonText}>INGRESAR A SALA DE SUBASTA</Text>
           </TouchableOpacity>
         </View>

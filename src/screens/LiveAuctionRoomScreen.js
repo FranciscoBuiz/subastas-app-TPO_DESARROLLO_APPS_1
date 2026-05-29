@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {StyleSheet,Text,View,TouchableOpacity,TextInput,ActivityIndicator,Alert} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
+import { canEnterAuction } from '../utils/category';
 import { Feather } from '@expo/vector-icons';
 import { placeBid, resetStatus, receiveNewBid } from '../store/slices/liveAuctionSlice';
 
@@ -14,11 +15,28 @@ export default function LiveAuctionRoomScreen({ navigation }) {
     status, 
     errorMessage 
   } = useSelector((state) => state.liveAuction);
+  const selectedAuction = useSelector((state) => state.auctions.selectedAuction);
+  const user = useSelector((state) => state.auth.user);
+  const [canBid, setCanBid] = useState(true);
+  const [shownCategoryAlert, setShownCategoryAlert] = useState(false);
 
   const [bidInput, setBidInput] = useState('');
 
+  const minIncrement = currentItem.basePrice * 0.01;
+  const recommendedBid = currentHighestBid + minIncrement;
+
   // Simulación de WebSocket: Recibir pujas de otros usuarios aleatoriamente
   useEffect(() => {
+    // Verificar categoría al entrar a la sala y deshabilitar puja si corresponde
+    const userCat = user?.category ?? 'COMUN';
+    const auctionCat = selectedAuction?.category ?? 'COMUN';
+    const allowed = canEnterAuction(userCat, auctionCat);
+    setCanBid(allowed);
+    if (!allowed && !shownCategoryAlert) {
+      Alert.alert('Atención', `Podés ver la subasta pero no podés pujar. Tu categoría (${userCat}) es inferior a la requerida (${auctionCat}).`, [
+        { text: 'OK', onPress: () => setShownCategoryAlert(true) }
+      ]);
+    }
     const interval = setInterval(() => {
       // Simular que otro usuario puja si nosotros no somos el mejor postor, de vez en cuando
       if (highestBidder !== 'Tú' && status !== 'bidding') {
@@ -31,7 +49,7 @@ export default function LiveAuctionRoomScreen({ navigation }) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentHighestBid, highestBidder, status, dispatch, currentItem]);
+  }, [currentHighestBid, highestBidder, status, dispatch, currentItem, user, selectedAuction, shownCategoryAlert]);
 
   // Manejo de errores
   useEffect(() => {
@@ -40,18 +58,36 @@ export default function LiveAuctionRoomScreen({ navigation }) {
     }
   }, [status, errorMessage, dispatch]);
 
-  const handlePlaceBid = () => {
-    const amount = Number(bidInput);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Invalido', 'Por favor ingresa un monto válido.');
+  const handlePlaceBid = (overrideAmount) => {
+    if (!canBid) {
+      Alert.alert('No permitido', 'No podés pujar en esta subasta.');
       return;
     }
+
+    const minAmount = recommendedBid;
+    let amount;
+    if (overrideAmount !== undefined) {
+      amount = Number(overrideAmount);
+    } else if (!bidInput || bidInput.toString().trim() === '') {
+      amount = Number(minAmount);
+    } else {
+      amount = Number(bidInput);
+    }
+
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('Inválido', 'Por favor ingresa un monto válido.');
+      return;
+    }
+
+    if (amount < minAmount) {
+      Alert.alert('Oferta insuficiente', `La puja mínima es USD ${minAmount.toLocaleString()}`);
+      return;
+    }
+
     dispatch(placeBid(amount));
     setBidInput('');
   };
 
-  const minIncrement = currentItem.basePrice * 0.01;
-  const recommendedBid = currentHighestBid + minIncrement;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -65,6 +101,12 @@ export default function LiveAuctionRoomScreen({ navigation }) {
           <Text style={styles.liveText}>LIVE</Text>
         </View>
       </View>
+
+      { !canBid && (
+        <View style={{ backgroundColor: '#fff3cd', padding: 12, marginHorizontal: 16, borderRadius: 8, borderWidth:1, borderColor:'#ffeeba' }}>
+          <Text style={{ fontWeight: '800', color:'#856404', textAlign:'center' }}>Sólo observador: tu categoría no permite pujar en esta subasta.</Text>
+        </View>
+      )}
 
       {/* Reproductor de Video (Placeholder) */}
       <View style={styles.videoPlaceholder}>
@@ -101,33 +143,33 @@ export default function LiveAuctionRoomScreen({ navigation }) {
               placeholder={recommendedBid.toString()}
               value={bidInput}
               onChangeText={setBidInput}
-              editable={status !== 'bidding'}
+              editable={status !== 'bidding' && canBid}
             />
           </View>
 
           <TouchableOpacity 
             style={[styles.bidButton, status === 'bidding' && styles.bidButtonDisabled]} 
             onPress={handlePlaceBid}
-            disabled={status === 'bidding'}
+            disabled={status === 'bidding' || !canBid}
           >
             {status === 'bidding' ? (
               <ActivityIndicator color="#000" />
             ) : (
-              <Text style={styles.bidButtonText}>PUJAR AHORA</Text>
+              <Text style={styles.bidButtonText}>{canBid ? 'PUJAR AHORA' : 'NO PERMITIDO'}</Text>
             )}
           </TouchableOpacity>
 
           {/* Botones Rapidos */}
           <View style={styles.quickBidRow}>
             <TouchableOpacity 
-              style={styles.quickBidBtn}
-              onPress={() => { setBidInput(recommendedBid.toString()); }}
+              style={[styles.quickBidBtn, !canBid && styles.quickBidBtnDisabled]}
+              onPress={() => { handlePlaceBid(recommendedBid); }}
             >
-              <Text style={styles.quickBidText}>+{minIncrement.toLocaleString()}</Text>
+              <Text style={styles.quickBidText}>PUJA MÍNIMA</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.quickBidBtn}
-              onPress={() => { setBidInput((currentHighestBid + (currentItem.basePrice * 0.05)).toString()); }}
+              onPress={() => { if (canBid) setBidInput((currentHighestBid + (currentItem.basePrice * 0.05)).toString()); }}
             >
               <Text style={styles.quickBidText}>+5% Base</Text>
             </TouchableOpacity>
@@ -273,6 +315,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 4,
     marginHorizontal: 4 },
+  quickBidBtnDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#f8f9fa'
+  },
   quickBidText: {
     fontSize: 14,
     fontWeight: '800' }

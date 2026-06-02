@@ -1,91 +1,185 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {StyleSheet,Text,View,TouchableOpacity,TextInput,ActivityIndicator,Alert} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { canEnterAuction } from '../utils/category';
 import { Feather } from '@expo/vector-icons';
-import { placeBid, resetStatus, receiveNewBid } from '../store/slices/liveAuctionSlice';
+import { placeBid, resetStatus, fetchEstadoActual, receiveNewBid } from '../store/slices/liveAuctionSlice';
+import { ingresarSubasta } from '../store/slices/auctionsSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL, TOKEN_KEY } from '../api/client';
 
 export default function LiveAuctionRoomScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { 
-    currentItem, 
-    currentHighestBid, 
-    highestBidder, 
-    status, 
-    errorMessage 
+  const {
+    currentItem,
+    currentHighestBid,
+    highestBidder,
+    status,
+    errorMessage,
+    subastaTerminada,
   } = useSelector((state) => state.liveAuction);
   const selectedAuction = useSelector((state) => state.auctions.selectedAuction);
+  const asistenteId = useSelector((state) => state.auctions.asistenteId);
   const user = useSelector((state) => state.auth.user);
-  const [canBid, setCanBid] = useState(true);
+  const [canBid, setCanBid] = useState(false);
   const [shownCategoryAlert, setShownCategoryAlert] = useState(false);
-
   const [bidInput, setBidInput] = useState('');
+  const xhrRef = useRef(null);
+  const lastIndexRef = useRef(0);
 
-  const minIncrement = currentItem.basePrice * 0.01;
-  const recommendedBid = currentHighestBid + minIncrement;
+  const basePrice = currentItem?.basePrice ?? 0;
+  const minIncrement = basePrice * 0.01;
+  const recommendedBid = currentHighestBid > 0 ? currentHighestBid + minIncrement : basePrice;
+  const moneda = selectedAuction?.moneda === 'USD' ? 'USD' : '$';
 
-  // Simulación de WebSocket: Recibir pujas de otros usuarios aleatoriamente
-  useEffect(() => {
-    // Verificar categoría al entrar a la sala y deshabilitar puja si corresponde
-    const userCat = user?.category ?? 'COMUN';
-    const auctionCat = selectedAuction?.category ?? 'COMUN';
-    const allowed = canEnterAuction(userCat, auctionCat);
-    setCanBid(allowed);
-    if (!allowed && !shownCategoryAlert) {
-      Alert.alert('Atención', `Podés ver la subasta pero no podés pujar. Tu categoría (${userCat}) es inferior a la requerida (${auctionCat}).`, [
-        { text: 'OK', onPress: () => setShownCategoryAlert(true) }
-      ]);
+  // Conectar SSE para recibir actualizaciones en tiempo real
+  const conectarSSE = useCallback(async (subastaId) => {
+    // Cerrar conexión anterior si existe
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      xhrRef.current = null;
     }
-    const interval = setInterval(() => {
-      // Simular que otro usuario puja si nosotros no somos el mejor postor, de vez en cuando
-      if (highestBidder !== 'Tú' && status !== 'bidding') {
-        const randomChance = Math.random();
-        if (randomChance > 0.7) {
-          const newBid = currentHighestBid + (currentItem.basePrice * 0.05); // Aumenta 5% base
-          dispatch(receiveNewBid({ amount: newBid, bidder: `Usuario_${Math.floor(Math.random() * 1000)}` }));
+    lastIndexRef.current = 0;
+
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const url = `${API_BASE_URL}/subastas/${subastaId}/events`;
+
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open('GET', url, true);
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('Accept', 'text/event-stream');
+
+    xhr.onprogress = () => {
+      const chunk = xhr.responseText.slice(lastIndexRef.current);
+      lastIndexRef.current = xhr.responseText.length;
+
+      // Parsear eventos SSE del chunk
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const evento = JSON.parse(line.slice(6));
+            procesarEvento(evento);
+          } catch { /* ignorar líneas malformadas */ }
         }
       }
-    }, 5000);
+    };
 
-    return () => clearInterval(interval);
-  }, [currentHighestBid, highestBidder, status, dispatch, currentItem, user, selectedAuction, shownCategoryAlert]);
+    xhr.onerror = () => {
+      // Reconectar después de 5s si hay error de red
+      setTimeout(() => {
+        if (xhrRef.current === xhr) conectarSSE(subastaId);
+      }, 5000);
+    };
 
-  // Manejo de errores
+    xhr.send();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const procesarEvento = useCallback((evento) => {
+    if (evento.tipo === 'nueva_puja') {
+      dispatch(receiveNewBid({
+        amount: evento.importe,
+        bidder: `Postor #${evento.asistenteId}`,
+      }));
+      // Refrescar estado completo para mantener item actualizado
+      if (selectedAuction?.id) {
+        dispatch(fetchEstadoActual(selectedAuction.id));
+      }
+    } else if (evento.tipo === 'subasta_cerrada') {
+      dispatch({ type: 'liveAuction/subastaTerminada' });
+      Alert.alert(
+        'Subasta finalizada',
+        'La subasta ha cerrado. Ingresá a Mis Compras para ver el resultado.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
+      );
+    }
+  }, [dispatch, navigation, selectedAuction?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ingresar a la subasta y conectar SSE al montar
+  useEffect(() => {
+    if (!selectedAuction?.id) return;
+
+    const init = async () => {
+      // Verificar categoría
+      const userCat = user?.category ?? 'COMUN';
+      const auctionCat = selectedAuction?.category ?? 'COMUN';
+      const allowed = canEnterAuction(userCat, auctionCat);
+      setCanBid(allowed);
+      if (!allowed && !shownCategoryAlert) {
+        Alert.alert('Atención', `Podés ver la subasta pero no podés pujar. Tu categoría (${userCat}) es inferior a la requerida (${auctionCat}).`, [
+          { text: 'OK', onPress: () => setShownCategoryAlert(true) }
+        ]);
+      }
+
+      // Ingresar a la subasta si no tenemos asistenteId
+      if (!asistenteId) {
+        const ingResult = await dispatch(ingresarSubasta(selectedAuction.id));
+        if (ingresarSubasta.rejected.match(ingResult)) {
+          Alert.alert('No podés ingresar', ingResult.payload ?? 'Error al ingresar a la subasta');
+          return;
+        }
+      }
+
+      // Cargar estado inicial
+      dispatch(fetchEstadoActual(selectedAuction.id));
+
+      // Conectar SSE
+      await conectarSSE(selectedAuction.id);
+    };
+
+    init();
+
+    return () => {
+      // Desconectar SSE al salir
+      if (xhrRef.current) {
+        xhrRef.current.abort();
+        xhrRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAuction?.id]);
+
+  // Manejo de errores de puja
   useEffect(() => {
     if (status === 'error') {
       Alert.alert('Error al pujar', errorMessage, [{ text: 'OK', onPress: () => dispatch(resetStatus()) }]);
     }
   }, [status, errorMessage, dispatch]);
 
-  const handlePlaceBid = (overrideAmount) => {
+  const handlePlaceBid = async (overrideAmount) => {
     if (!canBid) {
       Alert.alert('No permitido', 'No podés pujar en esta subasta.');
       return;
     }
+    if (!currentItem) {
+      Alert.alert('Sin ítem', 'No hay un ítem activo para pujar.');
+      return;
+    }
+    if (!asistenteId) {
+      Alert.alert('Error', 'No estás registrado como asistente de esta subasta.');
+      return;
+    }
 
-    const minAmount = recommendedBid;
     let amount;
     if (overrideAmount !== undefined) {
       amount = Number(overrideAmount);
     } else if (!bidInput || bidInput.toString().trim() === '') {
-      amount = Number(minAmount);
+      amount = Number(recommendedBid.toFixed(2));
     } else {
       amount = Number(bidInput);
     }
 
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Inválido', 'Por favor ingresa un monto válido.');
+      Alert.alert('Inválido', 'Por favor ingresá un monto válido.');
       return;
     }
 
-    if (amount < minAmount) {
-      Alert.alert('Oferta insuficiente', `La puja mínima es USD ${minAmount.toLocaleString()}`);
-      return;
+    const result = await dispatch(placeBid({ itemId: currentItem.id, importe: amount }));
+    if (placeBid.fulfilled.match(result)) {
+      setBidInput('');
     }
-
-    dispatch(placeBid(amount));
-    setBidInput('');
   };
 
 
@@ -118,39 +212,42 @@ export default function LiveAuctionRoomScreen({ navigation }) {
       <View style={styles.body}>
         {/* Info del Ítem */}
         <View style={styles.itemInfo}>
-          <Text style={styles.itemTitle}>{currentItem.description}</Text>
-          <Text style={styles.itemBase}>Valor Base: USD ${currentItem.basePrice.toLocaleString()}</Text>
+          <Text style={styles.itemTitle}>{currentItem?.description ?? 'Cargando...'}</Text>
+          <Text style={styles.itemBase}>Valor Base: {moneda} {basePrice.toLocaleString()}</Text>
         </View>
 
         {/* Estado de la Puja */}
         <View style={styles.bidStatusContainer}>
           <Text style={styles.bidTitle}>Mayor Oferta Actual</Text>
-          <Text style={styles.currentBid}>USD ${currentHighestBid.toLocaleString()}</Text>
-          <Text style={styles.bidderName}>Postor: <Text style={{ fontWeight: '900' }}>{highestBidder}</Text></Text>
+          {status === 'loading'
+            ? <ActivityIndicator color="#000" style={{ marginVertical: 8 }} />
+            : <Text style={styles.currentBid}>{moneda} {currentHighestBid.toLocaleString()}</Text>
+          }
+          {highestBidder && <Text style={styles.bidderName}>Postor: <Text style={{ fontWeight: '900' }}>{highestBidder}</Text></Text>}
         </View>
 
         {/* Controles de Puja */}
         <View style={styles.controlsContainer}>
           <Text style={styles.instruction}>
-            El incremento mínimo es del 1% (USD ${minIncrement.toLocaleString()})
+            Incremento mínimo 1%: {moneda} {minIncrement.toLocaleString()}
           </Text>
-          
+
           <View style={styles.inputRow}>
-            <Text style={styles.currencyPrefix}>USD</Text>
+            <Text style={styles.currencyPrefix}>{moneda}</Text>
             <TextInput
               style={styles.bidInput}
               keyboardType="numeric"
-              placeholder={recommendedBid.toString()}
+              placeholder={recommendedBid.toFixed(2)}
               value={bidInput}
               onChangeText={setBidInput}
               editable={status !== 'bidding' && canBid}
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.bidButton, status === 'bidding' && styles.bidButtonDisabled]} 
-            onPress={handlePlaceBid}
-            disabled={status === 'bidding' || !canBid}
+          <TouchableOpacity
+            style={[styles.bidButton, (status === 'bidding' || !currentItem) && styles.bidButtonDisabled]}
+            onPress={() => handlePlaceBid()}
+            disabled={status === 'bidding' || !canBid || !currentItem}
           >
             {status === 'bidding' ? (
               <ActivityIndicator color="#000" />
@@ -161,15 +258,17 @@ export default function LiveAuctionRoomScreen({ navigation }) {
 
           {/* Botones Rapidos */}
           <View style={styles.quickBidRow}>
-            <TouchableOpacity 
-              style={[styles.quickBidBtn, !canBid && styles.quickBidBtnDisabled]}
-              onPress={() => { handlePlaceBid(recommendedBid); }}
+            <TouchableOpacity
+              style={[styles.quickBidBtn, (!canBid || !currentItem) && styles.quickBidBtnDisabled]}
+              onPress={() => handlePlaceBid(recommendedBid)}
+              disabled={!canBid || !currentItem}
             >
               <Text style={styles.quickBidText}>PUJA MÍNIMA</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickBidBtn}
-              onPress={() => { if (canBid) setBidInput((currentHighestBid + (currentItem.basePrice * 0.05)).toString()); }}
+            <TouchableOpacity
+              style={[styles.quickBidBtn, (!canBid || !currentItem) && styles.quickBidBtnDisabled]}
+              onPress={() => { if (canBid && currentItem) setBidInput((currentHighestBid + (basePrice * 0.05)).toFixed(2)); }}
+              disabled={!canBid || !currentItem}
             >
               <Text style={styles.quickBidText}>+5% Base</Text>
             </TouchableOpacity>

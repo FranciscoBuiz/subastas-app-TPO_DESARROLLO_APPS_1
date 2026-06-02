@@ -35,6 +35,9 @@ import ProfileScreen from './src/screens/profile/ProfileScreen';
 import MyAuctionsScreen from './src/screens/profile/MyAuctionsScreen';
 import StatisticsScreen from './src/screens/profile/StatisticsScreen';
 import PublishedItemsScreen from './src/screens/profile/PublishedItemsScreen';
+import NotificacionesScreen from './src/screens/profile/NotificacionesScreen';
+import MisComprasScreen from './src/screens/profile/MisComprasScreen';
+import CuentasScreen from './src/screens/seller/CuentasScreen';
 
 const Stack = createNativeStackNavigator();
 const ProfileNav = createNativeStackNavigator();
@@ -56,6 +59,8 @@ function ProfileStack() {
       <ProfileNav.Screen name="PublishedItems" component={PublishedItemsScreen} />
       <ProfileNav.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <ProfileNav.Screen name="AddPaymentMethod" component={AddPaymentMethodScreen} />
+      <ProfileNav.Screen name="Notificaciones" component={NotificacionesScreen} />
+      <ProfileNav.Screen name="MisCompras" component={MisComprasScreen} />
     </ProfileNav.Navigator>
   );
 }
@@ -102,6 +107,7 @@ function AppStack() {
       <Stack.Screen name="ConsignmentDetail" component={ConsignmentDetailScreen} />
       <Stack.Screen name="ConsignmentSuccess" component={ConsignmentSuccessScreen} />
       <Stack.Screen name="SellerLogistics" component={SellerLogisticsScreen} />
+      <Stack.Screen name="Cuentas" component={CuentasScreen} />
     </Stack.Navigator>
   );
 }

@@ -1,18 +1,25 @@
-import React, { useState } from 'react';
-import {View,Text,ScrollView,TouchableOpacity,StyleSheet,Image} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {View,Text,ScrollView,TouchableOpacity,StyleSheet,ActivityIndicator} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { selectAuction } from '../../store/slices/auctionsSlice';
+import { getMisSubastas } from '../../api/usuariosApi';
 
 export default function MyAuctionsScreen({ navigation }) {
-  const activeAuctions = useSelector(state => state.auctions.activeAuctions);
-  const [activeTab, setActiveTab] = useState('Participadas');
   const dispatch = useDispatch();
+  const [activeTab, setActiveTab] = useState('Participadas');
+  const [misSubastas, setMisSubastas] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const wonAuctions = activeAuctions.filter((auction, index) => index === 0);
-  const participatedAuctions = activeAuctions;
-  const currentList = activeTab === 'Participadas' ? participatedAuctions : wonAuctions;
+  useEffect(() => {
+    getMisSubastas()
+      .then(data => setMisSubastas(Array.isArray(data) ? data : []))
+      .catch(() => setMisSubastas([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const currentList = misSubastas;
 
   const handleSelectAuction = (id) => {
     dispatch(selectAuction(id));
@@ -41,7 +48,9 @@ export default function MyAuctionsScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-        {currentList.length === 0 ? (
+        {loading && <ActivityIndicator color="#000" style={{ marginVertical: 20 }} />}
+
+        {!loading && currentList.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>No hay subastas en esta categoría.</Text>
             <Text style={styles.emptyText}>Participa en una subasta desde Inicio para ver tus lotes aquí.</Text>
@@ -49,15 +58,16 @@ export default function MyAuctionsScreen({ navigation }) {
         ) : (
           currentList.map(auction => (
             <TouchableOpacity key={auction.id} style={styles.card} onPress={() => handleSelectAuction(auction.id)}>
-              <Image source={{ uri: auction.image }} style={styles.cardImage} />
+              <View style={styles.imagePlaceholder}>
+                <Feather name="activity" size={24} color="#bbb" />
+              </View>
               <View style={styles.cardContent}>
                 <Text style={styles.cardId}>ID: #{auction.id}</Text>
-                <Text style={styles.cardTitle}>{auction.title}</Text>
-                <Text style={styles.cardPrice}>Oferta actual</Text>
-                <Text style={styles.cardAmount}>{auction.currency} ${auction.items[0].basePrice.toLocaleString()}</Text>
+                <Text style={styles.cardTitle}>{auction.titulo ?? auction.title ?? `Subasta #${auction.id}`}</Text>
+                <Text style={styles.cardPrice}>{auction.estado?.toUpperCase() ?? '–'}</Text>
               </View>
               <View style={styles.badge}> 
-                <Text style={styles.badgeText}>{activeTab === 'Ganadas' ? 'FINALIZADO' : 'ACTIVO'}</Text>
+                <Text style={styles.badgeText}>{auction.estado === 'cerrada' ? 'FINALIZADO' : 'ACTIVO'}</Text>
               </View>
             </TouchableOpacity>
           ))
@@ -79,7 +89,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
   container: { flex: 1, padding: 16 },
   card: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 16, backgroundColor: '#fff' },
-  cardImage: { width: 92, height: 92, resizeMode: 'cover' },
+  imagePlaceholder: { width: 92, height: 92, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
   cardContent: { flex: 1, padding: 12 },
   cardId: { fontSize: 12, color: '#666', marginBottom: 4 },
   cardTitle: { fontSize: 16, fontWeight: '900', marginBottom: 8 },

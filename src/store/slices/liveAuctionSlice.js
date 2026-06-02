@@ -1,47 +1,47 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import * as pujasApi from '../../api/pujasApi';
+import * as subastasApi from '../../api/subastasApi';
 
-// Simular el backend confirmando una puja
-export const placeBid = createAsyncThunk(
-  'liveAuction/placeBid',
-  async (bidAmount, { getState, rejectWithValue }) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const state = getState().liveAuction;
-        // Validaciones del lado del servidor (simuladas)
-        const minBid = state.currentHighestBid + (state.currentItem.basePrice * 0.01);
-        const maxBid = state.currentHighestBid + (state.currentItem.basePrice * 0.20);
-        
-        if (bidAmount < minBid) {
-          rejectWithValue('La puja debe ser al menos 1% mayor al valor base sobre la oferta actual.');
-        } else if (bidAmount > maxBid && state.userCategory !== 'ORO' && state.userCategory !== 'PLATINO') {
-          rejectWithValue('La puja no puede superar el 20% del valor base.');
-        } else {
-          resolve(bidAmount);
-        }
-      }, 1000); // Simulamos 1 segundo de delay de red
-    });
+// ─── Thunks ───────────────────────────────────────────────────────────────────
+
+export const fetchEstadoActual = createAsyncThunk(
+  'liveAuction/fetchEstadoActual',
+  async (subastaId, { rejectWithValue }) => {
+    try {
+      return await subastasApi.getEstadoActual(subastaId);
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
   }
 );
 
+export const placeBid = createAsyncThunk(
+  'liveAuction/placeBid',
+  async ({ itemId, importe }, { rejectWithValue }) => {
+    try {
+      const data = await pujasApi.pujar(itemId, importe);
+      return { importe, data };
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+// ─── Slice ────────────────────────────────────────────────────────────────────
+
 const initialState = {
-  // Datos mock de la sala activa
-  currentItem: {
-    id: 'i1',
-    description: 'BMW M3 Competition',
-    basePrice: 85000,
-  },
-  currentHighestBid: 90000,
-  highestBidder: 'Otro Usuario',
-  userCategory: 'COMUN', // Mockeamos la categoría del usuario actual para validar las reglas
-  status: 'idle', // 'idle' | 'bidding' | 'success' | 'error'
+  currentItem: null,
+  currentHighestBid: 0,
+  highestBidder: null,
+  status: 'idle', // 'idle' | 'loading' | 'bidding' | 'success' | 'error'
   errorMessage: '',
+  subastaTerminada: false,
 };
 
 const liveAuctionSlice = createSlice({
   name: 'liveAuction',
   initialState,
   reducers: {
-    // Para simular que otro usuario pujó mediante websocket
     receiveNewBid: (state, action) => {
       state.currentHighestBid = action.payload.amount;
       state.highestBidder = action.payload.bidder;
@@ -49,9 +49,42 @@ const liveAuctionSlice = createSlice({
     resetStatus: (state) => {
       state.status = 'idle';
       state.errorMessage = '';
-    }
+    },
+    resetRoom: () => initialState,
+    subastaTerminada: (state) => {
+      state.subastaTerminada = true;
+    },
   },
   extraReducers: (builder) => {
+    builder
+      .addCase(fetchEstadoActual.pending, (state) => { state.status = 'loading'; })
+      .addCase(fetchEstadoActual.fulfilled, (state, action) => {
+        state.status = 'idle';
+        // El servidor devuelve { itemActual, mejorOferta (number|null), pujaMinima, pujaMaxima }
+        const { itemActual, mejorOferta } = action.payload;
+        if (itemActual) {
+          state.currentItem = {
+            id:          itemActual.id,
+            description: itemActual.descripcionCatalogo || 'Sin descripción',
+            basePrice:   itemActual.precioBase ?? 0,
+          };
+        }
+        if (mejorOferta !== null && mejorOferta !== undefined) {
+          state.currentHighestBid = mejorOferta;
+          // Solo sobreescribir el postor si no era "Vos" (evita flickering al refrescar)
+          if (state.highestBidder !== 'Vos') {
+            state.highestBidder = 'Otro postor';
+          }
+        } else if (itemActual) {
+          state.currentHighestBid = itemActual.precioBase ?? 0;
+          state.highestBidder = null;
+        }
+      })
+      .addCase(fetchEstadoActual.rejected, (state, action) => {
+        state.status = 'error';
+        state.errorMessage = action.payload;
+      });
+
     builder
       .addCase(placeBid.pending, (state) => {
         state.status = 'bidding';
@@ -59,8 +92,8 @@ const liveAuctionSlice = createSlice({
       })
       .addCase(placeBid.fulfilled, (state, action) => {
         state.status = 'success';
-        state.currentHighestBid = action.payload;
-        state.highestBidder = 'Tú';
+        state.currentHighestBid = action.payload.importe;
+        state.highestBidder = 'Vos';
       })
       .addCase(placeBid.rejected, (state, action) => {
         state.status = 'error';
@@ -69,6 +102,6 @@ const liveAuctionSlice = createSlice({
   },
 });
 
-export const { receiveNewBid, resetStatus } = liveAuctionSlice.actions;
-
+export const { receiveNewBid, resetStatus, resetRoom, subastaTerminada } = liveAuctionSlice.actions;
 export default liveAuctionSlice.reducer;
+

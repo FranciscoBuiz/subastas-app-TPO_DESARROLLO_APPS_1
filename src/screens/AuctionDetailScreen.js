@@ -1,11 +1,21 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, Image, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { fetchCatalogo } from '../store/slices/auctionsSlice';
 
 export default function AuctionDetailScreen({ navigation }) {
+  const dispatch = useDispatch();
   const auction = useSelector((state) => state.auctions.selectedAuction);
+  const catalogoItems = useSelector((state) => state.auctions.catalogoItems);
+  const status = useSelector((state) => state.auctions.status);
+
+  useEffect(() => {
+    if (auction?.id) {
+      dispatch(fetchCatalogo(auction.id));
+    }
+  }, [auction?.id, dispatch]);
 
   if (!auction) {
     return (
@@ -14,6 +24,8 @@ export default function AuctionDetailScreen({ navigation }) {
       </View>
     );
   }
+
+  const items = catalogoItems.length > 0 ? catalogoItems : (auction.items ?? []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -29,22 +41,34 @@ export default function AuctionDetailScreen({ navigation }) {
 
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.contentContainer}>
-          <Text style={styles.seasonText}>CATÁLOGO DE VERANO</Text>
+          <Text style={styles.seasonText}>CATÁLOGO</Text>
           <Text style={styles.title}>{auction.title}</Text>
+          <Text style={styles.seasonText}>{auction.fecha} {auction.hora} — {auction.ubicacion}</Text>
           
           <View style={styles.mainDivider} />
           <View style={styles.listDivider} />
 
-          {auction.items.map((item, index) => (
+          {status === 'loading' && <ActivityIndicator style={{ marginVertical: 20 }} color="#000" />}
+
+          {items.map((item) => (
             <View key={item.id}>
               <View style={styles.itemRow}>
-                <Image source={{ uri: item.images[0] }} style={styles.itemImage} />
+                <View style={[styles.itemImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                  <Feather name="package" size={24} color="#aaa" />
+                </View>
                 <View style={styles.itemInfo}>
                   <View style={styles.itemHeaderRow}>
-                    <Text style={styles.itemRef}>PIEZA #{String(item.id).substring(0,3).toUpperCase() || '082'}</Text>
-                    <Text style={styles.itemPrice}>{auction.currency === 'USD' ? 'US$' : '$'}{item.basePrice.toLocaleString()}</Text>
+                    <Text style={styles.itemRef}>PIEZA #{item.id}</Text>
+                    {item.precioBase != null && (
+                      <Text style={styles.itemPrice}>
+                        {auction.currency === 'USD' ? 'US$' : '$'}{Number(item.precioBase).toLocaleString()}
+                      </Text>
+                    )}
                   </View>
-                  <Text style={styles.itemDescription} numberOfLines={3}>{item.description}</Text>
+                  <Text style={styles.itemDescription} numberOfLines={3}>
+                    {item.descripcionCatalogo || item.description || 'Sin descripción'}
+                  </Text>
+                  {item.duenio && <Text style={styles.ownerText}>Dueño: {item.duenio}</Text>}
                   <View style={styles.buttonRow}>
                     <TouchableOpacity 
                       style={styles.detailButton}
@@ -58,29 +82,26 @@ export default function AuctionDetailScreen({ navigation }) {
               <View style={styles.listDivider} />
             </View>
           ))}
-          
-          {/* Pagination Mock */}
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity style={styles.pageButton}>
-              <Feather name="chevron-left" size={14} color="black" />
-              <Text style={styles.pageButtonText}>ANTERIOR</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.pageNumbers}>
-              <Text style={[styles.pageNumber, styles.pageNumberActive]}>01</Text>
-              <Text style={styles.pageNumber}>02</Text>
-              <Text style={styles.pageNumber}>03</Text>
-            </View>
 
-            <TouchableOpacity style={styles.pageButton}>
-              <Text style={styles.pageButtonText}>SIGUIENTE</Text>
-              <Feather name="chevron-right" size={14} color="black" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={{height: 40}} />
+          {status !== 'loading' && items.length === 0 && (
+            <Text style={{ textAlign: 'center', color: '#888', marginTop: 20 }}>No hay items en el catálogo.</Text>
+          )}
+
+          <View style={{ height: 20 }} />
         </View>
       </ScrollView>
+
+      {auction.estado === 'abierta' && (
+        <View style={styles.liveButtonContainer}>
+          <TouchableOpacity
+            style={styles.liveButton}
+            onPress={() => navigation.navigate('LiveAuctionRoom')}
+          >
+            <View style={styles.liveDot} />
+            <Text style={styles.liveButtonText}>ENTRAR EN VIVO</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -170,6 +191,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
     lineHeight: 18,
+    marginBottom: 4,
+  },
+  ownerText: {
+    fontSize: 10,
+    color: '#888',
     marginBottom: 8,
   },
   buttonRow: {
@@ -220,6 +246,35 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   pageNumberActive: {
+    color: '#000',
+  },
+  liveButtonContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    backgroundColor: '#fff',
+  },
+  liveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F7D05C',
+    paddingVertical: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#000',
+  },
+  liveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'red',
+    marginRight: 10,
+  },
+  liveButtonText: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1,
     color: '#000',
   },
 });

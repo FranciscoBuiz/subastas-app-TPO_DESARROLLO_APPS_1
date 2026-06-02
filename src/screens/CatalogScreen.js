@@ -1,17 +1,15 @@
-import React from 'react';
-import {StyleSheet,Text,View,ScrollView,Image,TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import {StyleSheet,Text,View,ScrollView,TouchableOpacity,ActivityIndicator} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
-import { selectAuction } from '../store/slices/auctionsSlice';
+import { selectAuction, fetchSubastas } from '../store/slices/auctionsSlice';
 
 const Header = ({ navigation }) => (
   <View style={styles.header}>
-    <TouchableOpacity onPress={() => navigation.goBack()}>
-      <Feather name="arrow-left" size={24} color="black" />
-    </TouchableOpacity>
+    <View style={{ width: 24 }} />
     <Text style={styles.headerTitle}>SUBASTAPP</Text>
-    <TouchableOpacity>
+    <TouchableOpacity onPress={() => navigation.navigate('Perfil', { screen: 'Notificaciones' })}>
       <Feather name="bell" size={24} color="black" />
     </TouchableOpacity>
   </View>
@@ -20,7 +18,9 @@ const Header = ({ navigation }) => (
 const AuctionCard = ({ item, onPress }) => (
   <View style={styles.card}>
     <View style={styles.cardInner}>
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
+      <View style={[styles.cardImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+        <Feather name="package" size={32} color="#aaa" />
+      </View>
       <View style={styles.cardBody}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{item.title}</Text>
@@ -28,8 +28,9 @@ const AuctionCard = ({ item, onPress }) => (
             <Text style={styles.currencyText}>{item.currency}</Text>
           </View>
         </View>
-        <Text style={styles.cardCategory}>CATEGORIA: {item.category}</Text>
-        <Text style={styles.cardEndTime}>FINALIZA: {item.endTime}</Text>
+        <Text style={styles.cardCategory}>CATEGORÍA: {item.category}</Text>
+        <Text style={styles.cardEndTime}>FECHA: {item.endTime}</Text>
+        {item.ubicacion ? <Text style={styles.cardEndTime}>LUGAR: {item.ubicacion}</Text> : null}
         <TouchableOpacity style={styles.cardButton} activeOpacity={0.8} onPress={onPress}>
           <Text style={styles.cardButtonText}>ENTRAR</Text>
         </TouchableOpacity>
@@ -40,7 +41,11 @@ const AuctionCard = ({ item, onPress }) => (
 
 export default function CatalogScreen({ navigation }) {
   const dispatch = useDispatch();
-  const activeAuctions = useSelector((state) => state.auctions.activeAuctions);
+  const { activeAuctions, status, error } = useSelector((state) => state.auctions);
+
+  useEffect(() => {
+    dispatch(fetchSubastas('abierta'));
+  }, [dispatch]);
 
   const handleEnterAuction = (id) => {
     dispatch(selectAuction(id));
@@ -58,10 +63,19 @@ export default function CatalogScreen({ navigation }) {
             
             <View style={styles.subTitleRow}>
               <Text style={styles.subTitleLeft}>DISPONIBLES AHORA</Text>
-              <Text style={styles.subTitleRight}>FECHA ACTUAL</Text>
             </View>
             
             <View style={styles.divider} />
+
+            {status === 'loading' && (
+              <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#000" />
+            )}
+            {error ? (
+              <Text style={{ color: 'red', textAlign: 'center', marginTop: 20 }}>{error}</Text>
+            ) : null}
+            {status !== 'loading' && activeAuctions.length === 0 && !error && (
+              <Text style={{ textAlign: 'center', marginTop: 40, color: '#888' }}>No hay subastas abiertas en este momento.</Text>
+            )}
 
             {activeAuctions.map((item) => (
               <AuctionCard 

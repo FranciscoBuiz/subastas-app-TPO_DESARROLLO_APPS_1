@@ -1,13 +1,27 @@
-import React from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,Alert} from 'react-native';
+import React, { useEffect } from 'react';
+import {View,Text,StyleSheet,ScrollView,TouchableOpacity,Alert,ActivityIndicator} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
-import { removePaymentMethod } from '../../store/slices/paymentSlice';
+import { fetchMediosPago, eliminarMedioPago } from '../../store/slices/paymentSlice';
+
+const TIPO_ICONS = {
+  tarjeta: 'credit-card',
+  cuenta_bancaria: 'briefcase',
+  cheque_certificado: 'file-text',
+};
 
 export default function PaymentMethodsScreen({ navigation }) {
-  const { methods, totalLimit } = useSelector(state => state.payment);
+  const { methods, status } = useSelector(state => state.payment);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(fetchMediosPago());
+  }, [dispatch]);
+
+  const totalGarantia = methods
+    .filter(m => m.verificado === 'si' && m.montoGarantia != null)
+    .reduce((acc, m) => acc + Number(m.montoGarantia), 0);
 
   const handleRemove = (id) => {
     Alert.alert(
@@ -15,7 +29,7 @@ export default function PaymentMethodsScreen({ navigation }) {
       '¿Desea eliminar este método de pago?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: () => dispatch(removePaymentMethod(id)) }
+        { text: 'Eliminar', style: 'destructive', onPress: () => dispatch(eliminarMedioPago(id)) }
       ]
     );
   };
@@ -31,10 +45,10 @@ export default function PaymentMethodsScreen({ navigation }) {
 
       <ScrollView style={styles.container}>
         <View style={styles.limitBox}>
-          <Text style={styles.limitTitle}>LÍMITE DE PUJA DISPONIBLE</Text>
-          <Text style={styles.limitAmount}>USD ${totalLimit.toLocaleString()}</Text>
+          <Text style={styles.limitTitle}>GARANTÍA TOTAL VERIFICADA</Text>
+          <Text style={styles.limitAmount}>${totalGarantia.toLocaleString()}</Text>
           <Text style={styles.limitSubtitle}>
-            Este valor determina hasta cuánto puede ofertar en una subasta en vivo. Añada garantías o tarjetas internacionales para aumentarlo.
+            Suma de garantías en medios de pago verificados. Determina tu capacidad de puja.
           </Text>
         </View>
 
@@ -44,36 +58,42 @@ export default function PaymentMethodsScreen({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Tus Métodos Activos</Text>
+
+        {status === 'loading' && <ActivityIndicator color="#000" style={{ marginVertical: 20 }} />}
         
-        {methods.length === 0 ? (
+        {status !== 'loading' && methods.length === 0 && (
           <View style={styles.emptyBox}>
             <Feather name="credit-card" size={40} color="#ccc" />
-            <Text style={styles.emptyText}>No tienes métodos registrados. Tu límite actual es 0.</Text>
+            <Text style={styles.emptyText}>No tenés métodos registrados.</Text>
           </View>
-        ) : (
-          methods.map(method => (
-            <View key={method.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Feather 
-                  name={method.type === 'CARD' ? 'credit-card' : 'briefcase'} 
-                  size={24} 
-                  color="#000" 
-                />
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardBank}>{method.bank}</Text>
-                  <Text style={styles.cardDetail}>**** {method.last4}</Text>
-                </View>
-                <TouchableOpacity onPress={() => handleRemove(method.id)}>
-                  <Feather name="trash-2" size={20} color="#d32f2f" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardBadge}>{method.isInternational ? 'INTERNACIONAL' : 'NACIONAL'}</Text>
-                <Text style={styles.cardLimit}>Límite Aportado: +${method.limitAssigned.toLocaleString()}</Text>
-              </View>
-            </View>
-          ))
         )}
+
+        {methods.map(method => (
+          <View key={method.id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Feather 
+                name={TIPO_ICONS[method.tipo] ?? 'credit-card'} 
+                size={24} 
+                color="#000" 
+              />
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardBank}>{method.descripcion}</Text>
+                <Text style={styles.cardDetail}>{method.tipo?.replace('_', ' ').toUpperCase()} — {method.moneda}</Text>
+              </View>
+              <TouchableOpacity onPress={() => handleRemove(method.id)}>
+                <Feather name="trash-2" size={20} color="#d32f2f" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.cardFooter}>
+              <Text style={[styles.cardBadge, method.verificado === 'si' ? styles.badgeVerified : styles.badgePending]}>
+                {method.verificado === 'si' ? 'VERIFICADO' : 'PENDIENTE'}
+              </Text>
+              {method.montoGarantia != null && (
+                <Text style={styles.cardLimit}>Garantía: ${Number(method.montoGarantia).toLocaleString()}</Text>
+              )}
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -100,6 +120,8 @@ const styles = StyleSheet.create({
   cardBank: { fontSize: 16, fontWeight: '800' },
   cardDetail: { fontSize: 14, color: '#555' },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 12 },
-  cardBadge: { fontSize: 10, fontWeight: '800', color: '#fff', backgroundColor: '#333', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  cardBadge: { fontSize: 10, fontWeight: '800', color: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  badgeVerified: { backgroundColor: '#2e7d32' },
+  badgePending: { backgroundColor: '#e65100' },
   cardLimit: { fontSize: 12, fontWeight: '700', color: '#2e7d32' }
 });

@@ -1,29 +1,51 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
-import { simulateApproval } from '../../store/slices/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { registroFinalThunk } from '../../store/slices/authSlice';
 
-export default function RegisterStep2Screen({ navigation }) {
+export default function RegisterStep2Screen({ navigation, route }) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   const dispatch = useDispatch();
+  const { status, pendingClienteId } = useSelector((state) => state.auth);
+  const isLoading = status === 'loading';
 
-  const handleFinish = () => {
-    if (!password || password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden o están vacías.');
+  const handleFinish = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Ingresá tu email.');
+      return;
+    }
+    if (!password || password.length < 8) {
+      Alert.alert('Error', 'La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
       return;
     }
     if (!acceptedTerms) {
       Alert.alert('Términos', 'Debes aceptar los términos y condiciones para continuar.');
       return;
     }
-    
-    dispatch(simulateApproval());
+    if (!pendingClienteId) {
+      Alert.alert('Error', 'No hay un pre-registro pendiente. Volvé al paso anterior.');
+      return;
+    }
+
+    const result = await dispatch(registroFinalThunk({ clienteId: pendingClienteId, email, clave: password }));
+    if (registroFinalThunk.fulfilled.match(result)) {
+      Alert.alert('¡Listo!', 'Tu cuenta fue creada. Ahora podés iniciar sesión.', [
+        { text: 'Iniciar sesión', onPress: () => navigation.navigate('Login') },
+      ]);
+    } else {
+      Alert.alert('Error', result.payload || 'No se pudo completar el registro');
+    }
   };
 
   return (
@@ -42,6 +64,19 @@ export default function RegisterStep2Screen({ navigation }) {
         <Text style={styles.title}>CREAR{'\n'}CUENTA</Text>
         <View style={styles.titleUnderline} />
         
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>EMAIL</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="tu@email.com"
+            placeholderTextColor="#aaa"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
+
         <View style={styles.inputContainer}>
           <Text style={styles.label}>CREAR CONTRASEÑA</Text>
           <View style={styles.inputWrapper}>
@@ -90,9 +125,15 @@ export default function RegisterStep2Screen({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleFinish}>
-          <Text style={styles.primaryButtonText}>COMPLETAR REGISTRO</Text>
-          <Feather name="arrow-right" size={16} color="#000" />
+        <TouchableOpacity style={[styles.primaryButton, isLoading && { opacity: 0.6 }]} onPress={handleFinish} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <>
+              <Text style={styles.primaryButtonText}>COMPLETAR REGISTRO</Text>
+              <Feather name="arrow-right" size={16} color="#000" />
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

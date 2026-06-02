@@ -63,6 +63,18 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.menuText}>Artículos Publicados</Text>
             <Feather name="chevron-right" size={20} color="#000" />
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuButton} onPress={() => navigation.navigate('MisCompras')}>
+            <Feather name="shopping-bag" size={20} color="#000" />
+            <Text style={styles.menuText}>Mis Compras</Text>
+            <Feather name="chevron-right" size={20} color="#000" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuButton} onPress={() => navigation.navigate('Notificaciones')}>
+            <Feather name="bell" size={20} color="#000" />
+            <Text style={styles.menuText}>Notificaciones</Text>
+            <Feather name="chevron-right" size={20} color="#000" />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={() => dispatch(logout())}>

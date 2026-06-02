@@ -1,30 +1,48 @@
 import React, { useState } from 'react';
-import {View,Text,StyleSheet,TouchableOpacity,TextInput,Alert,Switch} from 'react-native';
+import {View,Text,StyleSheet,TouchableOpacity,TextInput,Alert,ActivityIndicator} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
-import { addPaymentMethod } from '../../store/slices/paymentSlice';
+import { crearMedioPago } from '../../store/slices/paymentSlice';
+
+const TIPOS = [
+  { value: 'tarjeta', label: 'Tarjeta' },
+  { value: 'cuenta_bancaria', label: 'Cuenta Bancaria' },
+  { value: 'cheque_certificado', label: 'Cheque Certificado' },
+];
 
 export default function AddPaymentMethodScreen({ navigation }) {
   const dispatch = useDispatch();
-  const [bank, setBank] = useState('');
-  const [number, setNumber] = useState('');
-  const [isInternational, setIsInternational] = useState(false);
+  const { status } = useSelector(state => state.payment);
+  const [tipo, setTipo] = useState('tarjeta');
+  const [descripcion, setDescripcion] = useState('');
+  const [moneda, setMoneda] = useState('ARS');
+  const [montoGarantia, setMontoGarantia] = useState('');
+  const isLoading = status === 'loading';
 
-  const handleSave = () => {
-    if (!bank || number.length < 4) {
-      Alert.alert('Error', 'Por favor complete todos los campos válidos.');
+  const handleSave = async () => {
+    if (!descripcion.trim()) {
+      Alert.alert('Error', 'Por favor ingresá una descripción.');
+      return;
+    }
+    if (tipo === 'cheque_certificado' && !montoGarantia) {
+      Alert.alert('Error', 'El cheque certificado requiere un monto garantizado.');
       return;
     }
 
-    dispatch(addPaymentMethod({
-      type: 'CARD',
-      bank,
-      last4: number.slice(-4),
-      isInternational
-    }));
+    const payload = {
+      tipo,
+      descripcion: descripcion.trim(),
+      moneda,
+      ...(montoGarantia ? { montoGarantia: Number(montoGarantia) } : {}),
+    };
 
-    navigation.goBack();
+    const result = await dispatch(crearMedioPago(payload));
+    if (crearMedioPago.fulfilled.match(result)) {
+      navigation.goBack();
+    } else {
+      Alert.alert('Error', result.payload ?? 'No se pudo agregar el método de pago');
+    }
   };
 
   return (
@@ -37,37 +55,68 @@ export default function AddPaymentMethodScreen({ navigation }) {
       </View>
 
       <View style={styles.container}>
-        <Text style={styles.subtitle}>Las tarjetas internacionales otorgan un límite de puja mayor.</Text>
+        <Text style={styles.subtitle}>Agregá una tarjeta, cuenta bancaria o cheque certificado.</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Banco / Entidad</Text>
+          <Text style={styles.label}>Tipo</Text>
+          <View style={styles.tipoRow}>
+            {TIPOS.map(t => (
+              <TouchableOpacity
+                key={t.value}
+                style={[styles.tipoBtn, tipo === t.value && styles.tipoBtnActive]}
+                onPress={() => setTipo(t.value)}
+              >
+                <Text style={[styles.tipoBtnText, tipo === t.value && styles.tipoBtnTextActive]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Descripción</Text>
           <TextInput 
             style={styles.input} 
-            placeholder="Ej. Santander"
-            value={bank}
-            onChangeText={setBank}
+            placeholder="Ej. Visa Santander **** 1234"
+            value={descripcion}
+            onChangeText={setDescripcion}
           />
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Número de Tarjeta / Cuenta</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="XXXX-XXXX-XXXX-1234"
+          <Text style={styles.label}>Moneda</Text>
+          <View style={styles.tipoRow}>
+            {['ARS', 'USD'].map(m => (
+              <TouchableOpacity
+                key={m}
+                style={[styles.tipoBtn, moneda === m && styles.tipoBtnActive]}
+                onPress={() => setMoneda(m)}
+              >
+                <Text style={[styles.tipoBtnText, moneda === m && styles.tipoBtnTextActive]}>{m}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>
+            Monto de Garantía{tipo === 'cheque_certificado' ? ' *' : ' (opcional)'}
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ej. 50000"
             keyboardType="numeric"
-            maxLength={16}
-            value={number}
-            onChangeText={setNumber}
+            value={montoGarantia}
+            onChangeText={setMontoGarantia}
           />
         </View>
 
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Es una tarjeta internacional</Text>
-          <Switch value={isInternational} onValueChange={setIsInternational} />
-        </View>
-
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSave}>
-          <Text style={styles.primaryButtonText}>GUARDAR MÉTODO</Text>
+        <TouchableOpacity style={[styles.primaryButton, isLoading && { opacity: 0.6 }]} onPress={handleSave} disabled={isLoading}>
+          {isLoading
+            ? <ActivityIndicator color="#fff" />
+            : <Text style={styles.primaryButtonText}>GUARDAR MÉTODO</Text>
+          }
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -89,12 +138,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     height: 50,
-    fontSize: 16 },
-  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, padding: 16, backgroundColor: '#f9f9f9', borderRadius: 8, borderWidth: 1, borderColor: '#eee' },
-  switchLabel: { fontSize: 14, fontWeight: '700' },
+    fontSize: 16,
+    color: '#000',
+  },
+  tipoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tipoBtn: { paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: '#aaa', borderRadius: 6 },
+  tipoBtnActive: { backgroundColor: '#F7D05C', borderColor: '#000' },
+  tipoBtnText: { fontSize: 12, fontWeight: '700', color: '#555' },
+  tipoBtnTextActive: { color: '#000' },
   primaryButton: {
     backgroundColor: '#000',
     paddingVertical: 16,
     alignItems: 'center',
-    borderRadius: 8 },
-  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 } });
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  primaryButtonText: { color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 },
+});

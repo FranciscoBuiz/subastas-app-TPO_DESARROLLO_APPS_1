@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../../store/slices/authSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { loginThunk } from '../../store/slices/authSlice';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
+  const { status, error } = useSelector((state) => state.auth);
+  const isLoading = status === 'loading';
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Completar email y contraseña');
       return;
     }
-    dispatch(loginSuccess({
-      name: 'Usuario Logueado',
-      email: email,
-      category: 'COMUN',
-      paymentMethodsVerified: true 
-    }));
+    const result = await dispatch(loginThunk({ email, clave: password }));
+    if (loginThunk.rejected.match(result)) {
+      Alert.alert('Error al ingresar', result.payload || 'Credenciales inválidas');
+    }
   };
 
   return (
@@ -60,8 +60,11 @@ export default function LoginScreen({ navigation }) {
             />
           </View>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-            <Text style={styles.primaryButtonText}>INICIAR SESIÓN</Text>
+          <TouchableOpacity style={[styles.primaryButton, isLoading && { opacity: 0.6 }]} onPress={handleLogin} disabled={isLoading}>
+            {isLoading
+              ? <ActivityIndicator color="#000" />
+              : <Text style={styles.primaryButtonText}>INICIAR SESIÓN</Text>
+            }
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.linkButton}>

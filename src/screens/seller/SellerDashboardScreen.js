@@ -1,18 +1,30 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { fetchMisSolicitudes } from '../../store/slices/sellerSlice';
 
 export default function SellerDashboardScreen({ navigation }) {
-  const consignments = useSelector((state) => state.seller.myConsignments);
+  const dispatch = useDispatch();
+  const { myConsignments: consignments, status } = useSelector((state) => state.seller);
 
-  const getStatusBadgeStyle = (status) => {
-    switch(status) {
-      case 'ACEPTADO': return { backgroundColor: '#000', color: '#fff' };
-      case 'VENDIDO': return { backgroundColor: '#fff', color: '#000', borderWidth: 1, borderColor: '#000' };
-      default: return { backgroundColor: '#F7D05C', color: '#000' }; // EN EVALUACIÓN / PENDIENTE
+  useEffect(() => {
+    dispatch(fetchMisSolicitudes());
+  }, [dispatch]);
+
+  const getStatusBadgeStyle = (estado) => {
+    switch(estado) {
+      case 'aceptado': return { backgroundColor: '#000', color: '#fff' };
+      case 'rechazado': return { backgroundColor: '#d32f2f', color: '#fff' };
+      case 'devuelto': return { backgroundColor: '#fff', color: '#000', borderWidth: 1, borderColor: '#000' };
+      default: return { backgroundColor: '#F7D05C', color: '#000' }; // pendiente
     }
+  };
+
+  const estadoLabel = (estado) => {
+    const map = { pendiente: 'EN EVALUACIÓN', aceptado: 'ACEPTADO', rechazado: 'RECHAZADO', devuelto: 'DEVUELTO' };
+    return map[estado] ?? estado?.toUpperCase() ?? 'PENDIENTE';
   };
 
   return (
@@ -47,9 +59,18 @@ export default function SellerDashboardScreen({ navigation }) {
           <Feather name="filter" size={16} color="#000" />
         </TouchableOpacity>
 
+        {status === 'loading' && <ActivityIndicator color="#000" style={{ marginVertical: 20 }} />}
+
+        {status !== 'loading' && consignments.length === 0 && (
+          <View style={{ padding: 32, alignItems: 'center' }}>
+            <Feather name="inbox" size={40} color="#ccc" />
+            <Text style={{ color: '#666', marginTop: 12, textAlign: 'center' }}>No hay artículos enviados todavía.</Text>
+          </View>
+        )}
+
         {consignments.map((item, index) => {
-          const badgeStyle = getStatusBadgeStyle(item.status);
-          const showContractButton = item.status === 'ACEPTADO' || item.status === 'VENDIDO';
+          const badgeStyle = getStatusBadgeStyle(item.estado);
+          const showContractButton = item.estado === 'aceptado';
           
           return (
             <TouchableOpacity 
@@ -59,43 +80,45 @@ export default function SellerDashboardScreen({ navigation }) {
               activeOpacity={0.9}
             >
               <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{item.description.toUpperCase()}</Text>
+                <Text style={styles.cardTitle}>{(item.descripcion ?? `Artículo #${item.id}`).toUpperCase()}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: badgeStyle.backgroundColor, borderWidth: badgeStyle.borderWidth || 0, borderColor: badgeStyle.borderColor }]}>
                   <Text style={[styles.statusText, { color: badgeStyle.color }]}>
-                    {item.status === 'PENDIENTE' ? 'EN EVALUACIÓN' : item.status}
+                    {estadoLabel(item.estado)}
                   </Text>
                 </View>
               </View>
               
-              <Text style={styles.cardId}>ID: #ENV-{item.id ? item.id.substring(0,5).toUpperCase() : '92834'}</Text>
+              <Text style={styles.cardId}>ID: #ENV-{String(item.id).slice(0,5).toUpperCase()}</Text>
               
               <View style={styles.cardBody}>
                 <View style={styles.imagePlaceholder}>
-                  {item.images && item.images.length > 0 ? (
-                    <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
-                  ) : (
-                    <View style={styles.xContainer}>
-                      <View style={styles.xLine1} />
-                      <View style={styles.xLine2} />
-                    </View>
-                  )}
+                  <View style={styles.xContainer}>
+                    <View style={styles.xLine1} />
+                    <View style={styles.xLine2} />
+                  </View>
                 </View>
                 <View style={styles.cardDetails}>
-                  <Text style={styles.dateLabel}>FECHA DE ENVÍO</Text>
-                  <Text style={styles.dateValue}>12 OCT 2023</Text>
+                  <Text style={styles.dateLabel}>PRODUCTO ID</Text>
+                  <Text style={styles.dateValue}>{item.productoId ?? '-'}</Text>
                 </View>
               </View>
 
               {showContractButton && (
                 <View style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>
-                    {item.status === 'VENDIDO' ? 'VER DETALLE DE VENTA' : 'VER CONTRATO DE SUBASTA'}
-                  </Text>
+                  <Text style={styles.actionButtonText}>VER CONTRATO DE SUBASTA</Text>
                 </View>
               )}
             </TouchableOpacity>
-          )
+          );
         })}
+
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: '#f5f5f5', marginTop: 8 }]}
+          onPress={() => navigation.navigate('Cuentas')}
+        >
+          <Feather name="credit-card" size={20} color="#000" style={{ marginRight: 12 }} />
+          <Text style={styles.addButtonText}>MIS CUENTAS PARA COBRO</Text>
+        </TouchableOpacity>
 
         <View style={styles.bottomBlocks}>
           <TouchableOpacity style={styles.supportBlock}>

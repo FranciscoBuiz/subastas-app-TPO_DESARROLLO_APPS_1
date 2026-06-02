@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
-import { addConsignment } from '../../store/slices/sellerSlice';
+import { crearNuevaSolicitud } from '../../store/slices/sellerSlice';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function NewConsignmentScreen({ navigation }) {
   const dispatch = useDispatch();
+  const user = useSelector(state => state.auth.user);
+  const { status } = useSelector(state => state.seller);
+  const isLoading = status === 'loading';
   const [form, setForm] = useState({ title: '', artist: '', description: '', history: '' });
   const [agreedLegal, setAgreedLegal] = useState(false);
   const [photos, setPhotos] = useState([]);
@@ -28,9 +31,8 @@ export default function NewConsignmentScreen({ navigation }) {
     });
 
     if (!result.canceled && result.assets) {
-      const selectedUris = result.assets.map(asset => asset.uri);
-      const newPhotos = [...photos, ...selectedUris];
-      if (newPhotos.length > 10) { // arbitrary max limit just in case
+      const newPhotos = [...photos, ...result.assets];
+      if (newPhotos.length > 10) {
         Alert.alert('Aviso', 'Puedes subir un máximo de 10 fotos.');
         setPhotos(newPhotos.slice(0, 10));
       } else {
@@ -48,7 +50,7 @@ export default function NewConsignmentScreen({ navigation }) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.title || !form.description) {
       Alert.alert('Error', 'Complete el nombre de la obra y la descripción técnica.');
       return;
@@ -57,23 +59,33 @@ export default function NewConsignmentScreen({ navigation }) {
       Alert.alert('Atención', 'Debe aceptar la declaración jurada legal para continuar.');
       return;
     }
-    if (photos.length < 1) { // Mockup says min 6, let's enforce min 1 for easier testing, or min 6 as requested
-      // For usability in a demo, maybe 1 is fine, but let's stick to the prompt's spirit (6)
-      if (photos.length < 6) {
-        Alert.alert('Incompleto', 'Se requieren mínimo 6 fotografías del artículo.');
-        return;
-      }
+    if (photos.length < 6) {
+      Alert.alert('Incompleto', 'Se requieren mínimo 6 fotografías del artículo.');
+      return;
     }
 
-    dispatch(addConsignment({
-      description: form.title,
-      artist: form.artist,
-      history: form.history,
-      technicalDescription: form.description,
-      images: photos
-    }));
+    const formData = new FormData();
+    formData.append('duenioId', String(user?.id));
+    formData.append('descripcionCompleta', form.history || form.description);
+    formData.append('descripcionCatalogo', form.title);
+    formData.append('aceptaCondiciones', 'si');
+    formData.append('origenLicitoDeclarado', 'si');
+    if (form.artist) formData.append('artista', form.artist);
 
-    navigation.replace('ConsignmentSuccess');
+    photos.forEach((asset, i) => {
+      formData.append('fotos', {
+        uri: asset.uri,
+        name: asset.fileName ?? `foto_${i}.jpg`,
+        type: asset.mimeType ?? 'image/jpeg',
+      });
+    });
+
+    const result = await dispatch(crearNuevaSolicitud(formData));
+    if (crearNuevaSolicitud.fulfilled.match(result)) {
+      navigation.replace('ConsignmentSuccess');
+    } else {
+      Alert.alert('Error', result.payload ?? 'No se pudo enviar la solicitud');
+    }
   };
 
   return (
@@ -105,7 +117,7 @@ export default function NewConsignmentScreen({ navigation }) {
           ) : (
             <View style={styles.galleryContainer}>
               <View style={styles.mainImageContainer}>
-                <Image source={{ uri: photos[mainPhotoIndex] }} style={styles.mainImage} />
+                <Image source={{ uri: photos[mainPhotoIndex]?.uri }} style={styles.mainImage} />
                 <TouchableOpacity style={styles.removeButton} onPress={() => removePhoto(mainPhotoIndex)}>
                   <Feather name="x" size={16} color="#fff" />
                 </TouchableOpacity>
@@ -115,13 +127,13 @@ export default function NewConsignmentScreen({ navigation }) {
                 <TouchableOpacity style={styles.addMoreThumbnail} onPress={selectPhotos}>
                   <Feather name="plus" size={20} color="#000" />
                 </TouchableOpacity>
-                {photos.map((uri, idx) => (
+                {photos.map((asset, idx) => (
                   <TouchableOpacity 
                     key={idx} 
                     style={[styles.thumbnailContainer, mainPhotoIndex === idx && styles.thumbnailActive]}
                     onPress={() => setMainPhotoIndex(idx)}
                   >
-                    <Image source={{ uri }} style={styles.thumbnailImage} />
+                    <Image source={{ uri: asset.uri }} style={styles.thumbnailImage} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -190,8 +202,8 @@ export default function NewConsignmentScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>ENVIAR SOLICITUD</Text>
+        <TouchableOpacity style={[styles.submitButton, isLoading && { opacity: 0.6 }]} onPress={handleSubmit} disabled={isLoading}>
+          {isLoading ? <ActivityIndicator color="#000" /> : <Text style={styles.submitButtonText}>ENVIAR SOLICITUD</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

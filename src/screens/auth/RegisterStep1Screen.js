@@ -1,13 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useDispatch, useSelector } from 'react-redux';
+import { preRegistroThunk } from '../../store/slices/authSlice';
+
+// Mapa simple de países al número de la tabla `paises`
+const PAISES = { argentina: 54, 'estados unidos': 1, uruguay: 598, brasil: 55 };
+
+function parsePais(texto) {
+  const clave = texto.trim().toLowerCase();
+  return PAISES[clave] ?? 54; // Por defecto Argentina
+}
 
 export default function RegisterStep1Screen({ navigation }) {
-  const [form, setForm] = useState({ name: '', surname: '', address: '', country: '' });
+  const [form, setForm] = useState({ name: '', surname: '', documento: '', address: '', country: 'Argentina' });
   const [photoFront, setPhotoFront] = useState(null);
   const [photoBack, setPhotoBack] = useState(null);
+  const dispatch = useDispatch();
+  const { status } = useSelector((state) => state.auth);
+  const isLoading = status === 'loading';
 
   const takePhoto = async (side) => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
@@ -25,15 +38,15 @@ export default function RegisterStep1Screen({ navigation }) {
 
     if (!result.canceled) {
       if (side === 'front') {
-        setPhotoFront(result.assets[0].uri);
+        setPhotoFront(result.assets[0]);
       } else {
-        setPhotoBack(result.assets[0].uri);
+        setPhotoBack(result.assets[0]);
       }
     }
   };
 
-  const handleSubmit = () => {
-    if (!form.name || !form.surname || !form.address || !form.country) {
+  const handleSubmit = async () => {
+    if (!form.name || !form.surname || !form.documento || !form.address || !form.country) {
       Alert.alert('Incompleto', 'Por favor complete todos los datos personales.');
       return;
     }
@@ -42,8 +55,30 @@ export default function RegisterStep1Screen({ navigation }) {
       Alert.alert('Incompleto', 'Por favor tome las fotos del DNI solicitadas.');
       return;
     }
-    
-    navigation.navigate('RegisterPending');
+
+    const formData = new FormData();
+    formData.append('nombre', form.name);
+    formData.append('apellido', form.surname);
+    formData.append('documento', form.documento);
+    formData.append('domicilio', form.address);
+    formData.append('pais', String(parsePais(form.country)));
+    formData.append('fotoDocumentoFrente', {
+      uri: photoFront.uri,
+      name: 'dni_frente.jpg',
+      type: 'image/jpeg',
+    });
+    formData.append('fotoDocumentoDorso', {
+      uri: photoBack.uri,
+      name: 'dni_dorso.jpg',
+      type: 'image/jpeg',
+    });
+
+    const result = await dispatch(preRegistroThunk(formData));
+    if (preRegistroThunk.fulfilled.match(result)) {
+      navigation.navigate('RegisterPending');
+    } else {
+      Alert.alert('Error en el registro', result.payload || 'No se pudo completar el pre-registro');
+    }
   };
 
   return (
@@ -85,6 +120,18 @@ export default function RegisterStep1Screen({ navigation }) {
         </View>
 
         <View style={styles.inputContainer}>
+          <Text style={styles.label}>DOCUMENTO (DNI / Pasaporte)</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Ej. 30123456"
+            placeholderTextColor="#aaa"
+            keyboardType="default"
+            value={form.documento} 
+            onChangeText={t => setForm({...form, documento: t})} 
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
           <Text style={styles.label}>DOMICILIO</Text>
           <TextInput 
             style={styles.input} 
@@ -113,7 +160,7 @@ export default function RegisterStep1Screen({ navigation }) {
         
         <TouchableOpacity style={styles.photoBox} onPress={() => takePhoto('front')}>
           {photoFront ? (
-            <Image source={{ uri: photoFront }} style={styles.previewImage} />
+            <Image source={{ uri: photoFront.uri }} style={styles.previewImage} />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Feather name="camera" size={24} color="#000" />
@@ -124,7 +171,7 @@ export default function RegisterStep1Screen({ navigation }) {
 
         <TouchableOpacity style={styles.photoBox} onPress={() => takePhoto('back')}>
           {photoBack ? (
-            <Image source={{ uri: photoBack }} style={styles.previewImage} />
+            <Image source={{ uri: photoBack.uri }} style={styles.previewImage} />
           ) : (
             <View style={styles.photoPlaceholder}>
               <Feather name="camera" size={24} color="#000" />
@@ -133,9 +180,15 @@ export default function RegisterStep1Screen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('RegisterStep2')}>
-          <Text style={styles.primaryButtonText}>ENVIAR DATOS</Text>
-          <Feather name="arrow-right" size={16} color="#000" />
+        <TouchableOpacity style={[styles.primaryButton, isLoading && { opacity: 0.6 }]} onPress={handleSubmit} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <>
+              <Text style={styles.primaryButtonText}>ENVIAR DATOS</Text>
+              <Feather name="arrow-right" size={16} color="#000" />
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

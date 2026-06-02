@@ -1,18 +1,26 @@
-import React from 'react';
-import {View,Text,ScrollView,TouchableOpacity,StyleSheet} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {View,Text,ScrollView,TouchableOpacity,StyleSheet,ActivityIndicator} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { getMetricasMe } from '../../api/usuariosApi';
 
 export default function StatisticsScreen({ navigation }) {
-  const auctions = useSelector(state => state.auctions.activeAuctions);
-  const consignments = useSelector(state => state.seller.myConsignments);
   const paymentMethods = useSelector(state => state.payment.methods);
+  const [metricas, setMetricas] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const participatedCount = auctions.length;
-  const wonCount = consignments.filter(item => item.status === 'ACEPTADO').length;
-  const totalOffered = auctions.reduce((sum, auction) => sum + auction.items.reduce((itemSum, item) => itemSum + item.basePrice, 0), 0);
-  const totalPaid = consignments.filter(item => item.status === 'ACEPTADO').reduce((sum, item) => sum + (item.basePriceAssigned || 0), 0);
+  useEffect(() => {
+    getMetricasMe()
+      .then(data => setMetricas(data))
+      .catch(() => setMetricas(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const participatedCount = metricas?.cantidadSubastasAsistidas ?? 0;
+  const wonCount = metricas?.cantidadSubastasGanadas ?? 0;
+  const totalOffered = metricas?.importeTotalOfertado ?? 0;
+  const totalPaid = metricas?.importeTotalPagado ?? 0;
 
   const chartBars = [0.8, 0.6, 0.9, 0.5, 0.7, 0.85, 0.65, 0.6, 0.75, 0.4, 0.55, 0.7];
 
@@ -26,6 +34,7 @@ export default function StatisticsScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+        {loading && <ActivityIndicator color="#000" style={{ marginVertical: 20 }} />}
         <View style={styles.gridRow}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{participatedCount}</Text>

@@ -5,10 +5,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { selectAuction } from '../store/slices/auctionsSlice';
 
-const Header = () => (
+const Header = ({ navigation }) => (
   <View style={styles.header}>
-    <TouchableOpacity>
-      <Feather name="menu" size={24} color="black" />
+    <TouchableOpacity onPress={() => navigation.goBack()}>
+      <Feather name="arrow-left" size={24} color="black" />
     </TouchableOpacity>
     <Text style={styles.headerTitle}>SUBASTAPP</Text>
     <TouchableOpacity>
@@ -50,7 +50,7 @@ export default function CatalogScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Header />
+        <Header navigation={navigation} />
         
         <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
           <View style={styles.contentContainer}>

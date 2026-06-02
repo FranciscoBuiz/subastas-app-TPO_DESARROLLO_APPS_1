@@ -18,7 +18,9 @@ export default function ProfileScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
-          <MaterialCommunityIcons name="menu" size={24} color="#000" />
+          <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
           <Feather name="user" size={24} color="#000" />
         </View>
 

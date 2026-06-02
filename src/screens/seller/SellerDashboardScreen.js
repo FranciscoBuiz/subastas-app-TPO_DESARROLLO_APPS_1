@@ -1,5 +1,5 @@
 import React from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,Image} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
@@ -7,47 +7,108 @@ import { Feather } from '@expo/vector-icons';
 export default function SellerDashboardScreen({ navigation }) {
   const consignments = useSelector((state) => state.seller.myConsignments);
 
-  const getStatusColor = (status) => {
+  const getStatusBadgeStyle = (status) => {
     switch(status) {
-      case 'ACEPTADO': return '#2e7d32';
-      case 'RECHAZADO': return '#d32f2f';
-      default: return '#f57c00';
+      case 'ACEPTADO': return { backgroundColor: '#000', color: '#fff' };
+      case 'VENDIDO': return { backgroundColor: '#fff', color: '#000', borderWidth: 1, borderColor: '#000' };
+      default: return { backgroundColor: '#F7D05C', color: '#000' }; // EN EVALUACIÓN / PENDIENTE
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Consignaciones</Text>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
+          <Feather name="arrow-left" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>SUBASTAPP</Text>
+        <TouchableOpacity style={styles.headerIcon}>
+          <Feather name="help-circle" size={24} color="black" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Gestiona los artículos que has propuesto para subastar.</Text>
+        <Text style={styles.sectionOverline}>REGISTRO DE CONSIGNACIÓN</Text>
+        <Text style={styles.title}>ARTICULOS PUBLICADOS</Text>
+        <Text style={styles.subtitle}>
+          Seguimiento técnico de artículos enviados a revisión. El proceso de evaluación puede demorar hasta 48 horas hábiles.
+        </Text>
 
         <TouchableOpacity 
           style={styles.addButton}
           onPress={() => navigation.navigate('NewConsignment')}
         >
-          <Feather name="plus-circle" size={24} color="#000" style={{ marginRight: 8 }} />
-          <Text style={styles.addButtonText}>NUEVO ARTÍCULO</Text>
+          <Feather name="plus-square" size={20} color="#000" style={{ marginRight: 12 }} />
+          <Text style={styles.addButtonText}>VENDER NUEVO ARTÍCULO</Text>
         </TouchableOpacity>
 
-        {consignments.map(item => (
-          <TouchableOpacity 
-            key={item.id} 
-            style={styles.card}
-            onPress={() => navigation.navigate('ConsignmentDetail', { itemId: item.id })}
-          >
-            <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{item.description}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-                <Text style={styles.statusText}>{item.status}</Text>
+        <TouchableOpacity style={styles.filterButton}>
+          <Text style={styles.filterText}>FILTRAR POR ESTADO</Text>
+          <Feather name="filter" size={16} color="#000" />
+        </TouchableOpacity>
+
+        {consignments.map((item, index) => {
+          const badgeStyle = getStatusBadgeStyle(item.status);
+          const showContractButton = item.status === 'ACEPTADO' || item.status === 'VENDIDO';
+          
+          return (
+            <TouchableOpacity 
+              key={item.id || index} 
+              style={styles.card}
+              onPress={() => navigation.navigate('ConsignmentDetail', { itemId: item.id })}
+              activeOpacity={0.9}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>{item.description.toUpperCase()}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: badgeStyle.backgroundColor, borderWidth: badgeStyle.borderWidth || 0, borderColor: badgeStyle.borderColor }]}>
+                  <Text style={[styles.statusText, { color: badgeStyle.color }]}>
+                    {item.status === 'PENDIENTE' ? 'EN EVALUACIÓN' : item.status}
+                  </Text>
+                </View>
               </View>
-            </View>
-            <Feather name="chevron-right" size={24} color="#666" />
+              
+              <Text style={styles.cardId}>ID: #ENV-{item.id ? item.id.substring(0,5).toUpperCase() : '92834'}</Text>
+              
+              <View style={styles.cardBody}>
+                <View style={styles.imagePlaceholder}>
+                  {item.images && item.images.length > 0 ? (
+                    <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
+                  ) : (
+                    <View style={styles.xContainer}>
+                      <View style={styles.xLine1} />
+                      <View style={styles.xLine2} />
+                    </View>
+                  )}
+                </View>
+                <View style={styles.cardDetails}>
+                  <Text style={styles.dateLabel}>FECHA DE ENVÍO</Text>
+                  <Text style={styles.dateValue}>12 OCT 2023</Text>
+                </View>
+              </View>
+
+              {showContractButton && (
+                <View style={styles.actionButton}>
+                  <Text style={styles.actionButtonText}>
+                    {item.status === 'VENDIDO' ? 'VER DETALLE DE VENTA' : 'VER CONTRATO DE SUBASTA'}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )
+        })}
+
+        <View style={styles.bottomBlocks}>
+          <TouchableOpacity style={styles.supportBlock}>
+            <Text style={styles.blockTitle}>24h</Text>
+            <Text style={styles.blockSub}>SOPORTE TÉCNICO</Text>
           </TouchableOpacity>
-        ))}
+          <TouchableOpacity style={styles.logBlock}>
+            <Text style={styles.blockTitle}>LOG</Text>
+            <Text style={styles.blockSub}>GUÍAS DE ENVÍO</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={{height: 40}} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -55,36 +116,90 @@ export default function SellerDashboardScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  header: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#000' },
-  headerTitle: { fontSize: 24, fontWeight: '900' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    padding: 16, 
+    borderBottomWidth: 2, 
+    borderBottomColor: '#000' 
+  },
+  headerIcon: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
   container: { flex: 1, padding: 16 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 20 },
+  
+  sectionOverline: { fontSize: 8, fontWeight: '900', letterSpacing: 1, color: '#666', marginBottom: 4 },
+  title: { fontSize: 36, fontWeight: '900', letterSpacing: -1, marginBottom: 12, color: '#000', lineHeight: 36 },
+  subtitle: { fontSize: 11, color: '#555', lineHeight: 16, marginBottom: 24 },
+  
   addButton: {
     flexDirection: 'row',
-    backgroundColor: '#F7D05C',
-    padding: 16,
-    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F7D05C',
+    paddingVertical: 18,
     borderWidth: 2,
     borderColor: '#000',
-    marginBottom: 24 },
-  addButtonText: { fontSize: 16, fontWeight: '900', color: '#000' },
-  card: {
+    marginBottom: 16,
+  },
+  addButtonText: { fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#000' },
+
+  filterButton: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fafafa',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 12 },
-  cardImage: { width: 60, height: 60, borderRadius: 4, marginRight: 12 },
-  cardBody: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4 },
-  statusText: { fontSize: 10, fontWeight: '800', color: '#fff' } });
+    borderWidth: 2,
+    borderColor: '#000',
+    padding: 12,
+    marginBottom: 24,
+  },
+  filterText: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+
+  card: {
+    borderWidth: 2,
+    borderColor: '#000',
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#fff',
+  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardTitle: { flex: 1, fontSize: 14, fontWeight: '900', marginRight: 12 },
+  statusBadge: { paddingHorizontal: 6, paddingVertical: 4 },
+  statusText: { fontSize: 8, fontWeight: '900', letterSpacing: 1 },
+  cardId: { fontSize: 10, color: '#666', fontWeight: '700', marginTop: 4, marginBottom: 16 },
+  
+  cardBody: { flexDirection: 'row', alignItems: 'center' },
+  imagePlaceholder: {
+    width: 60,
+    height: 60,
+    borderWidth: 2,
+    borderColor: '#000',
+    marginRight: 16,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden'
+  },
+  cardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  xContainer: { position: 'relative', width: '100%', height: '100%' },
+  xLine1: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderBottomWidth: 1, borderColor: '#aaa', transform: [{ rotate: '45deg' }] },
+  xLine2: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderBottomWidth: 1, borderColor: '#aaa', transform: [{ rotate: '-45deg' }] },
+  
+  cardDetails: { flex: 1 },
+  dateLabel: { fontSize: 10, fontWeight: '800', marginBottom: 2 },
+  dateValue: { fontSize: 12, fontWeight: '900' },
+  
+  actionButton: {
+    backgroundColor: '#F7D05C',
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  actionButtonText: { color: '#000', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+
+  bottomBlocks: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 },
+  supportBlock: { flex: 1, borderWidth: 2, borderColor: '#000', padding: 16, marginRight: 8 },
+  logBlock: { flex: 1, borderWidth: 2, borderColor: '#000', padding: 16, marginLeft: 8 },
+  blockTitle: { fontSize: 24, fontWeight: '900' },
+  blockSub: { fontSize: 8, fontWeight: '900', letterSpacing: 1, color: '#666', marginTop: 4 }
+});

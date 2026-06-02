@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import {View,Text,StyleSheet,TouchableOpacity,TextInput,Alert} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import { Feather } from '@expo/vector-icons';
 import { loginSuccess } from '../../store/slices/authSlice';
 
 export default function LoginScreen({ navigation }) {
@@ -15,76 +14,111 @@ export default function LoginScreen({ navigation }) {
       Alert.alert('Error', 'Completar email y contraseña');
       return;
     }
-    // Simulación de validación de backend
     dispatch(loginSuccess({
       name: 'Usuario Logueado',
       email: email,
       category: 'COMUN',
-      paymentMethodsVerified: true }));
+      paymentMethodsVerified: true 
+    }));
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Feather name="arrow-left" size={24} color="black" />
-        </TouchableOpacity>
-      </View>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+          
+          <View style={styles.headerSpacer} />
+          
+          <Text style={styles.title}>Iniciar Sesión</Text>
+          <Text style={styles.subtitle}>ACCESO A LA PLATAFORMA DE SUBASTAS</Text>
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>EMAIL</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="ejemplo@dominio.com"
+              placeholderTextColor="#aaa"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
 
-      <View style={styles.container}>
-        <Text style={styles.title}>Bienvenido de vuelta</Text>
-        
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Correo Electrónico</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="ejemplo@correo.com"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>CONTRASEÑA</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="••••••••"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Contraseña</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="********"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
+            <Text style={styles.primaryButtonText}>INICIAR SESIÓN</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-          <Text style={styles.primaryButtonText}>INGRESAR</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={styles.linkButton}>
+            <Text style={styles.linkText}>RECUPERAR CONTRASEÑA</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>O</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity 
+            style={styles.linkButton} 
+            onPress={() => navigation.navigate('RegisterStep1')}
+          >
+            <Text style={styles.linkText}>CREAR CUENTA</Text>
+          </TouchableOpacity>
+          
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  header: { padding: 16 },
-  container: { flex: 1, padding: 24 },
-  title: { fontSize: 32, fontWeight: '900', marginBottom: 32 },
-  inputContainer: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '700', marginBottom: 8, color: '#333' },
+  container: { flex: 1 },
+  scrollContainer: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, justifyContent: 'center' },
+  headerSpacer: { height: 40 }, 
+  title: { fontSize: 48, fontWeight: '900', marginBottom: 8, letterSpacing: -1, color: '#000' },
+  subtitle: { fontSize: 10, fontWeight: '800', color: '#666', letterSpacing: 1, marginBottom: 40 },
+  inputContainer: { marginBottom: 24 },
+  label: { fontSize: 10, fontWeight: '900', marginBottom: 8, color: '#000', letterSpacing: 1 },
   input: {
     borderWidth: 1,
-    borderColor: '#aaa',
-    borderRadius: 8,
+    borderColor: '#000',
+    height: 54,
     paddingHorizontal: 16,
-    height: 50,
-    fontSize: 16 },
+    fontSize: 14,
+    backgroundColor: '#fff',
+    color: '#000'
+  },
   primaryButton: {
-    backgroundColor: '#F7D05C',
-    paddingVertical: 16,
+    backgroundColor: '#F7D05C', // Color amarillo como fue pedido
+    paddingVertical: 18,
     alignItems: 'center',
-    borderRadius: 8,
+    justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#000',
-    marginTop: 20 },
-  primaryButtonText: { fontSize: 16, fontWeight: '900', color: '#000' } });
+    marginTop: 8,
+    marginBottom: 32
+  },
+  primaryButtonText: { fontSize: 12, fontWeight: '900', color: '#000', letterSpacing: 1 },
+  linkButton: { alignItems: 'center', paddingVertical: 12 },
+  linkText: { fontSize: 11, fontWeight: '900', color: '#000', letterSpacing: 1, textDecorationLine: 'underline' },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#eee' },
+  dividerText: { marginHorizontal: 16, fontSize: 12, fontWeight: '800', color: '#aaa' }
+});

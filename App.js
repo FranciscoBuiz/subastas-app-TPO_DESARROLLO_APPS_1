@@ -18,12 +18,15 @@ import LiveAuctionRoomScreen from './src/screens/LiveAuctionRoomScreen';
 import WelcomeScreen from './src/screens/auth/WelcomeScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterStep1Screen from './src/screens/auth/RegisterStep1Screen';
+import RegisterPendingScreen from './src/screens/auth/RegisterPendingScreen';
 import RegisterStep2Screen from './src/screens/auth/RegisterStep2Screen';
 
 // Pantallas del Vendedor
 import SellerDashboardScreen from './src/screens/seller/SellerDashboardScreen';
 import NewConsignmentScreen from './src/screens/seller/NewConsignmentScreen';
 import ConsignmentDetailScreen from './src/screens/seller/ConsignmentDetailScreen';
+import ConsignmentSuccessScreen from './src/screens/seller/ConsignmentSuccessScreen';
+import SellerLogisticsScreen from './src/screens/seller/SellerLogisticsScreen';
 
 // Pantallas de Perfil / Pagos
 import PaymentMethodsScreen from './src/screens/profile/PaymentMethodsScreen';
@@ -97,6 +100,8 @@ function AppStack() {
       <Stack.Screen name="LiveAuctionRoom" component={LiveAuctionRoomScreen} />
       <Stack.Screen name="NewConsignment" component={NewConsignmentScreen} />
       <Stack.Screen name="ConsignmentDetail" component={ConsignmentDetailScreen} />
+      <Stack.Screen name="ConsignmentSuccess" component={ConsignmentSuccessScreen} />
+      <Stack.Screen name="SellerLogistics" component={SellerLogisticsScreen} />
     </Stack.Navigator>
   );
 }
@@ -108,6 +113,7 @@ function AuthStack() {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="RegisterStep1" component={RegisterStep1Screen} />
+      <Stack.Screen name="RegisterPending" component={RegisterPendingScreen} />
       <Stack.Screen name="RegisterStep2" component={RegisterStep2Screen} />
     </Stack.Navigator>
   );

@@ -1,93 +1,154 @@
 import React from 'react';
-import {View,Text,StyleSheet,ScrollView,TouchableOpacity,Image} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 
 export default function ConsignmentDetailScreen({ route, navigation }) {
   const { itemId } = route.params;
-  const consignment = useSelector(state => 
+  const dispatch = useDispatch();
+  const item = useSelector(state => 
     state.seller.myConsignments.find(c => c.id === itemId)
   );
 
-  if (!consignment) {
+  if (!item) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <Text>Artículo no encontrado</Text>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
+            <Feather name="arrow-left" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+        <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+          <Text>Artículo no encontrado</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
+  const renderStatusBadge = () => {
+    switch (item.status) {
+      case 'ACEPTADO':
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: '#000' }]}>
+            <Text style={[styles.statusText, { color: '#fff' }]}>APROBADO PARA SUBASTA</Text>
+          </View>
+        );
+      case 'VENDIDO':
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#000' }]}>
+            <Text style={[styles.statusText, { color: '#000' }]}>ARTÍCULO VENDIDO</Text>
+          </View>
+        );
+      default:
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: '#F7D05C' }]}>
+            <Text style={[styles.statusText, { color: '#000' }]}>EN EVALUACIÓN</Text>
+          </View>
+        );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detalle del Artículo</Text>
+        <Text style={styles.headerTitle}>SUBASTAPP</Text>
+        <TouchableOpacity style={styles.headerIcon}>
+          <Feather name="help-circle" size={24} color="black" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container}>
-        <Image source={{ uri: consignment.images[0] }} style={styles.mainImage} />
-        
-        <View style={styles.content}>
-          <Text style={styles.title}>{consignment.description}</Text>
-          <Text style={styles.history}>{consignment.history}</Text>
-          
-          <View style={styles.statusBox}>
-            <Text style={styles.sectionTitle}>Estado de Inspección</Text>
-            <Text style={[styles.statusText, { color: consignment.status === 'RECHAZADO' ? '#d32f2f' : '#000' }]}>
-              {consignment.status}
-            </Text>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <Text style={styles.sectionOverline}>ESTADO DEL ARTÍCULO</Text>
+        <Text style={styles.title}>{item.description.toUpperCase()}</Text>
+        {renderStatusBadge()}
+
+        {item.status === 'ACEPTADO' && (
+          <View style={styles.contentSection}>
+            <Text style={styles.sectionTitle}>CONTRATO DE SUBASTA</Text>
             
-            {consignment.status === 'RECHAZADO' && (
-              <View style={styles.rejectionBox}>
-                <Feather name="alert-triangle" size={20} color="#d32f2f" style={{marginRight: 8}}/>
-                <Text style={styles.rejectionText}>{consignment.rejectionReason}</Text>
+            <View style={styles.contractBox}>
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>VALORACIÓN ESTIMADA</Text>
+                <Text style={styles.contractValue}>$45,000 - $60,000 USD</Text>
               </View>
-            )}
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>PRECIO DE RESERVA</Text>
+                <Text style={styles.contractValue}>$40,000 USD</Text>
+              </View>
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>COMISIÓN DE LA CASA</Text>
+                <Text style={styles.contractValue}>12% DEL PRECIO FINAL</Text>
+              </View>
+              <View style={[styles.contractRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+                <Text style={styles.contractLabel}>FECHA DE SUBASTA</Text>
+                <Text style={styles.contractValue}>15 NOV 2023</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.primaryButton}
+              onPress={() => Alert.alert('Términos aceptados', 'El contrato ha sido firmado.')}
+            >
+              <Text style={styles.primaryButtonText}>ACEPTAR TÉRMINOS</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>RECHAZAR OFERTA</Text>
+            </TouchableOpacity>
           </View>
+        )}
 
-          {consignment.status === 'ACEPTADO' && (
-            <View style={styles.acceptedBox}>
-              <Text style={styles.sectionTitle}>Datos Comerciales</Text>
-              <View style={styles.row}>
-                <Text style={styles.label}>Valor Base Asignado:</Text>
-                <Text style={styles.value}>{consignment.currency} ${consignment.basePriceAssigned}</Text>
+        {item.status === 'VENDIDO' && (
+          <View style={styles.contentSection}>
+            <Text style={styles.sectionTitle}>RESUMEN DE VENTA</Text>
+            
+            <View style={styles.contractBox}>
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>PRECIO MARTILLO</Text>
+                <Text style={styles.contractValue}>$58,000 USD</Text>
               </View>
-              <View style={styles.row}>
-                <Text style={styles.label}>Comisión (Empresa):</Text>
-                <Text style={styles.value}>{consignment.commissions}%</Text>
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>COMISIÓN (12%)</Text>
+                <Text style={styles.contractValue}>-$6,960 USD</Text>
               </View>
-
-              <View style={styles.divider} />
-
-              <Text style={styles.sectionTitle}>Logística y Seguro</Text>
-              <View style={styles.row}>
-                <Text style={styles.label}>Ubicación Actual:</Text>
-                <Text style={styles.value}>{consignment.location}</Text>
+              <View style={styles.contractRow}>
+                <Text style={styles.contractLabel}>SEGURO Y GASTOS</Text>
+                <Text style={styles.contractValue}>-$450 USD</Text>
               </View>
-              <View style={styles.insuranceBox}>
-                <Feather name="shield" size={24} color="#2e7d32" />
-                <View style={{ marginLeft: 12, flex: 1 }}>
-                  <Text style={styles.insuranceTitle}>Póliza Activa</Text>
-                  <Text style={styles.insuranceText}>{consignment.insurancePolicy}</Text>
-                </View>
+              <View style={[styles.contractRow, { borderBottomWidth: 0, paddingBottom: 0, paddingTop: 16 }]}>
+                <Text style={styles.contractLabel}>TOTAL A RECIBIR</Text>
+                <Text style={[styles.contractValue, { fontSize: 24 }]}>$50,590</Text>
               </View>
-              <TouchableOpacity style={styles.contactInsuranceBtn}>
-                <Text style={styles.contactInsuranceText}>Contactar Aseguradora (Aumentar Póliza)</Text>
-              </TouchableOpacity>
             </View>
-          )}
 
-          {consignment.status === 'PENDIENTE' && (
-            <View style={styles.pendingBox}>
-              <Feather name="clock" size={24} color="#f57c00" />
-              <Text style={styles.pendingText}>Su artículo se encuentra bajo evaluación por nuestro equipo de expertos. Recibirá una notificación al finalizar la inspección.</Text>
-            </View>
-          )}
+            <TouchableOpacity 
+              style={styles.primaryButton}
+              onPress={() => navigation.navigate('SellerLogistics')}
+            >
+              <Text style={styles.primaryButtonText}>VER ESTADO DE LOGÍSTICA</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        </View>
+        {item.status === 'PENDIENTE' && (
+          <View style={styles.contentSection}>
+             <View style={styles.imagePlaceholder}>
+                {item.images && item.images.length > 0 ? (
+                  <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
+                ) : (
+                  <Feather name="image" size={32} color="#aaa" />
+                )}
+             </View>
+             <Text style={[styles.sectionTitle, {marginTop: 16}]}>DETALLES DEL ARTÍCULO</Text>
+             <Text style={styles.itemDetailText}>{item.history || 'Sin historia detallada.'}</Text>
+          </View>
+        )}
+
+        <View style={{height: 40}} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -95,29 +156,73 @@ export default function ConsignmentDetailScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#000' },
-  backButton: { marginRight: 16 },
-  headerTitle: { fontSize: 18, fontWeight: '900' },
-  container: { flex: 1 },
-  mainImage: { width: '100%', height: 250, backgroundColor: '#eee' },
-  content: { padding: 20 },
-  title: { fontSize: 24, fontWeight: '900', marginBottom: 8 },
-  history: { fontSize: 14, color: '#555', marginBottom: 24, lineHeight: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', marginBottom: 12, letterSpacing: 0.5 },
-  statusBox: { marginBottom: 24, padding: 16, backgroundColor: '#f5f5f5', borderRadius: 8 },
-  statusText: { fontSize: 18, fontWeight: '800' },
-  rejectionBox: { flexDirection: 'row', marginTop: 12, padding: 12, backgroundColor: '#ffebee', borderRadius: 8 },
-  rejectionText: { flex: 1, color: '#d32f2f', fontSize: 12, fontWeight: '600' },
-  acceptedBox: { padding: 16, borderWidth: 1, borderColor: '#ddd', borderRadius: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  label: { fontSize: 14, color: '#666' },
-  value: { fontSize: 14, fontWeight: '700' },
-  divider: { height: 1, backgroundColor: '#ddd', marginVertical: 16 },
-  insuranceBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e8f5e9', padding: 16, borderRadius: 8, marginTop: 12 },
-  insuranceTitle: { fontSize: 14, fontWeight: '800', color: '#2e7d32' },
-  insuranceText: { fontSize: 12, color: '#2e7d32', marginTop: 4 },
-  contactInsuranceBtn: { marginTop: 12, padding: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#000', borderRadius: 8, alignItems: 'center' },
-  contactInsuranceText: { fontSize: 12, fontWeight: '800' },
-  pendingBox: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#fff3e0', borderRadius: 8, borderWidth: 1, borderColor: '#ffe0b2' },
-  pendingText: { flex: 1, marginLeft: 12, fontSize: 12, color: '#e65100', lineHeight: 18 }
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    padding: 16, 
+    borderBottomWidth: 2, 
+    borderBottomColor: '#000' 
+  },
+  headerIcon: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '900', letterSpacing: -0.5 },
+  container: { flex: 1, padding: 24 },
+  
+  sectionOverline: { fontSize: 10, fontWeight: '900', letterSpacing: 1, color: '#666', marginBottom: 4 },
+  title: { fontSize: 32, fontWeight: '900', letterSpacing: -1, marginBottom: 12, color: '#000', lineHeight: 34 },
+  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, marginBottom: 32 },
+  statusText: { fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+
+  contentSection: { marginTop: 8 },
+  sectionTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 1, marginBottom: 16 },
+
+  contractBox: {
+    borderWidth: 2,
+    borderColor: '#000',
+    padding: 16,
+    marginBottom: 32
+  },
+  contractRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  contractLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: '#666' },
+  contractValue: { fontSize: 14, fontWeight: '900' },
+
+  primaryButton: {
+    backgroundColor: '#F7D05C',
+    paddingVertical: 18,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#000',
+    marginBottom: 16
+  },
+  primaryButtonText: { color: '#000', fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  
+  secondaryButton: {
+    backgroundColor: '#000',
+    paddingVertical: 18,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#000'
+  },
+  secondaryButtonText: { color: '#fff', fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+
+  imagePlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#f5f5f5',
+    borderWidth: 2,
+    borderColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden'
+  },
+  cardImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  itemDetailText: { fontSize: 14, lineHeight: 22, color: '#333' }
 });
